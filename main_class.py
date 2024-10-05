@@ -9,12 +9,12 @@ class Dwarf:
         # Начальная позиция персонажа
         self.dwarf_x = 50 # Положение слева
         self.dwarf_y = screen_height - 100 # Вычисляем высоту пола
-        self.dwarf_speed = 0.4  # Скорость перемещения персонажа
+        self.dwarf_speed = 1  # Скорость перемещения персонажа
         self.dwarf_is_jumping = False
         self.dwarf_jump_speed = 8  # Начальная высота прыжка
         self.dwarf_bullets = [] # Список для хранения пуль
 
-        self.dwarf_bullet_speed = 1.1 # Скорость пуль
+        self.dwarf_bullet_speed = 3 # Скорость пуль
 
         # Переменная для хранения направления стрельбы
         self.dwarf_shoot_direction = 1  # 1 - вправо, -1 - влево
