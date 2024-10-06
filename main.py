@@ -3,7 +3,7 @@ import os
 from PIL import Image
 import time
 
-from main_class import Dwarf
+from main_class import Dwarf, TheEvilDwarf
 from platforms import platforms, background_images
 
 jump_speed = 16  # Начальная скорость прыжка
@@ -11,8 +11,10 @@ gravity = 0.9  # Сила гравитации (ускорение падени�
 max_fall_speed = 0.9  # Максимальная скорость падения
 
 jump_delay = 0.8  # Задержка между прыжками в секундах
+
+
 class GameDwarf:
-    def __init__(self, dwarf):
+    def __init__(self, dwarf, evil_dwarf):
         # Инициализация игры
         self.runGame = True
 
@@ -26,6 +28,12 @@ class GameDwarf:
         self.dwarf_bullets = dwarf.dwarf_characteristics()['dwarf_bullets']  # Список пуль
         self.dwarf_can_shoot = dwarf.dwarf_characteristics()['dwarf_can_shoot']  # Флаг возможности стрельбы
         self.dwarf_bullet_speed = dwarf.dwarf_characteristics()['dwarf_bullet_speed']  # Скорость пули
+
+        # Злодеи 0 lvl
+        self.evil_dwarf_image = evil_dwarf.evil_dwarf_characteristics()['evil_dwarf_image']  # Изображение персонажа
+        self.evil_dwarf_x = evil_dwarf.evil_dwarf_characteristics()['evil_dwarf_x']
+        self.evil_dwarf_y = evil_dwarf.evil_dwarf_characteristics()['evil_dwarf_y']
+
 
         # Общие переменные
         self.vertical_velocity = 0  # Вертикальная скорость
@@ -43,12 +51,11 @@ class GameDwarf:
                 self.runGame = False  # Завершаем игру, если закрыли окно
 
     def move_dwarf(self, keys):
-        # Управление движением персонажа
+        # Управление движением персонажа (гл. герой)
         current_time = time.time()  # Текущее время в секундах
 
         if keys[pygame.K_LEFT]:  # Движение влево
             self.dwarf_x, self.dwarf_shoot_direction = dwarf.moving_the_dwarf_LEFT(self.dwarf_x)
-
         if keys[pygame.K_RIGHT]:  # Движение вправо
             self.dwarf_x, self.dwarf_shoot_direction = dwarf.moving_the_dwarf_RIGHT(self.dwarf_x)
 
@@ -128,6 +135,28 @@ class GameDwarf:
         # Удаляем пули, которые вышли за экран
         self.dwarf_bullets = [(bullet, direction) for bullet, direction in self.dwarf_bullets if bullet.x > 0 and bullet.x < size[0]]
 
+    def evil_dwarf_main(self):
+        """Функция ЗЛОГО ГНОМА (ПРОТИВНИКА)"""
+
+        #________________СТРЕЛЬБА В ЗЛОГО ГНОМА______________________________
+        check_evil_dwarf_rect = False
+        if self.evil_dwarf_image:
+            evil_dwarf_rect = pygame.Rect(self.evil_dwarf_x, self.evil_dwarf_y, self.evil_dwarf_image.get_width(), self.evil_dwarf_image.get_height())
+            check_evil_dwarf_rect = True
+
+        # Если злой гном существует, проверяем столкновения
+        for bullet, _ in self.dwarf_bullets:
+            if check_evil_dwarf_rect:
+                if evil_dwarf_rect.colliderect(bullet):
+                    self.evil_dwarf_image = None  # Убираем злого гнома
+                    break  # Прерываем цикл после попадания
+
+        # ________________СТРЕЛЬБА В ЗЛОГО ГНОМА______________________________
+
+        """Функция перемещения гнома"""
+        self.evil_dwarf_x = evil_dwarf.actions_evil_dwarf(evil_dwarf, size) # Перемещение
+
+
     def draw(self, screen):
         # Отрисовка элементов игры
         screen.blit(background_images[self.current_location], [0, 0])  # Отображаем фон
@@ -135,10 +164,15 @@ class GameDwarf:
         # Отображение платформ
         for platform in platforms[self.current_location]:
             scaled_platform_image = pygame.transform.scale(pygame.image.load('media/image_main/platform_1_fixed.png'), (platform.width, platform.height))  # Масштабируем платформы
-            screen.blit(scaled_platform_image, (platform.x, platform.y))  # Отображаем платформы
+            screen.blit(scaled_platform_image, (platform.x, platform.y)) # Отображаем платформы
 
         # Отображение персонажа
         screen.blit(self.dwarf_image, [self.dwarf_x, self.dwarf_y])
+
+        # Отображение злодеев
+        # Если злой гном существует, рисуем его
+        if self.evil_dwarf_image and self.current_location == 0:
+            screen.blit(self.evil_dwarf_image, (self.evil_dwarf_x, self.evil_dwarf_y))
 
         # Отображение пуль
         for bullet, _ in self.dwarf_bullets:
@@ -151,6 +185,7 @@ class GameDwarf:
             self.handle_events()
             keys = pygame.key.get_pressed()
             self.move_dwarf(keys)
+            self.evil_dwarf_main()
             self.apply_gravity(floor_y)
             self.check_boundaries(size)
             self.shoot(keys)
@@ -185,6 +220,13 @@ if __name__ == "__main__":
     image.save("media/image_main/platform_1_fixed.png", icc_profile=None)
 
     size, screen, floor_y, platforms, background_images = initialize_game()
-    dwarf = Dwarf(screen.get_height())
-    game_dwarf = GameDwarf(dwarf)
+
+    """Гл персы"""
+    dwarf = Dwarf(screen.get_height()) # Гл. перс 0 lvl
+
+    """Противники"""
+    evil_dwarf = TheEvilDwarf(screen.get_height()) # Противник 0 lvl
+
+
+    game_dwarf = GameDwarf(dwarf, evil_dwarf)
     game_dwarf.main(size, floor_y)
