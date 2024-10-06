@@ -123,13 +123,13 @@ class TheEvilDwarf:
 
     def actions_evil_dwarf_LEFT(self, evil_dwarf_x, evil_check_x):
         self.evil_dwarf_x = evil_dwarf_x
-        self.evil_dwarf_x -= 1
+        self.evil_dwarf_x -= 0.5
 
         return self.evil_dwarf_x
 
     def actions_evil_dwarf_RIGHT(self, evil_dwarf_x, evil_check_x):
         self.evil_dwarf_x = evil_dwarf_x
-        self.evil_dwarf_x += 1
+        self.evil_dwarf_x += 0.5
 
         return self.evil_dwarf_x
 
