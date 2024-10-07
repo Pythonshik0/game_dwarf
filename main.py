@@ -3,7 +3,8 @@ import os
 from PIL import Image
 import time
 
-from main_class import Dwarf, TheEvilDwarf
+from main_class import TheEvilDwarf
+from dwarf import Dwarf
 from platforms import platforms, background_images
 
 jump_speed = 16  # Начальная скорость прыжка
@@ -30,8 +31,11 @@ class GameDwarf:
         self.dwarf_can_shoot = dwarf.dwarf_characteristics()['dwarf_can_shoot']  # Флаг возможности стрельбы
         self.dwarf_bullet_speed = dwarf.dwarf_characteristics()['dwarf_bullet_speed']  # Скорость пули
 
+        # Стрельбы перса
+        self.K_and_W = True
+
         # Злодеи 0 lvl
-        self.evil_dwarf_bullets = [] # Выстрелы злодеия
+        self.evil_dwarf_bullets = [] # Выстрелы злодея
         self.evil_dwarf_image = evil_dwarf.evil_dwarf_characteristics()['evil_dwarf_image']  # Изображение персонажа
         self.evil_dwarf_x = evil_dwarf.evil_dwarf_characteristics()['evil_dwarf_x']
         self.evil_dwarf_y = evil_dwarf.evil_dwarf_characteristics()['evil_dwarf_y']
@@ -53,78 +57,39 @@ class GameDwarf:
             if event.type == pygame.QUIT:
                 self.runGame = False  # Завершаем игру, если закрыли окно
 
-    def move_dwarf(self, keys):
-        # Управление движением персонажа (гл. герой)
+    def dwarf(self, keys, jump_delay, floor_y, size):
+        """Управление движением персонажа (гл. герой)"""
         current_time = time.time()  # Текущее время в секундах
 
-        if keys[pygame.K_LEFT]:  # Движение влево
-            self.dwarf_x, self.dwarf_shoot_direction = dwarf.moving_the_dwarf_LEFT(self.dwarf_x)
-        if keys[pygame.K_RIGHT]:  # Движение вправо
-            self.dwarf_x, self.dwarf_shoot_direction = dwarf.moving_the_dwarf_RIGHT(self.dwarf_x)
+        """ДВИЖЕНИЕ DWARF"""
+        self.dwarf_x, self.dwarf_shoot_direction = dwarf.moving_the_dwarf_LEFT(keys, self.dwarf_x) # Движение влево
+        self.dwarf_x, self.dwarf_shoot_direction = dwarf.moving_the_dwarf_RIGHT(keys, self.dwarf_x) # Движение вправо
 
-        # Проверка на прыжок: можно прыгать только после задержки
-        if keys[pygame.K_UP] and not self.dwarf_is_jumping and (current_time - self.last_jump_time > jump_delay):
-            self.dwarf_is_jumping = True  # Устанавливаем флаг прыжка
-            self.vertical_velocity -= jump_speed  # Начальная вертикальная скорость при прыжке
-            self.dwarf_space = True  # Флаг пространства для прыжка
-            self.last_jump_time = current_time  # Обновляем время последнего прыжка
+        """ПРЫЖОК DWARF"""
+        self.dwarf_is_jumping, self.vertical_velocity, self.dwarf_space, self.last_jump_time = dwarf.dwarf_is_jumping_K_UP(
+            self.dwarf_is_jumping, keys, self.vertical_velocity, current_time, jump_delay, jump_speed, self.last_jump_time
+        )
 
-    def apply_gravity(self, floor_y):
-        # Применение гравитации и обновление положения персонажа
-        if self.dwarf_is_jumping:
-            self.dwarf_y += self.vertical_velocity  # Обновляем положение по Y с учётом скорости
-            self.vertical_velocity += gravity  # Применяем гравитацию (ускорение)
+        """ГРАВИТАЦИЯ И ОБНОВЛЕНИЕ ПЕРСОНАЖА НА КАРТЕ"""
+        data = {
+            'dwarf_space': self.dwarf_space, 'dwarf_is_jumping': self.dwarf_is_jumping, 'dwarf_y': self.dwarf_y,
+            'dwarf_x': self.dwarf_x, 'floor_y': floor_y, 'vertical_velocity': self.vertical_velocity,
+            'gravity': gravity, 'max_fall_speed': max_fall_speed, 'current_location': self.current_location, 'platforms': platforms
+        }
+        self.dwarf_space, self.vertical_velocity, self.dwarf_is_jumping, self.dwarf_y, self.dwarf_x = dwarf.dwarf_apply_gravity(data)
 
-            # Ограничиваем скорость падения
-            if self.vertical_velocity > max_fall_speed:
-                self.vertical_velocity = max_fall_speed
 
-        # Проверяем коллизии с платформами и полом
-        if self.dwarf_image:
-            character_rect = pygame.Rect(self.dwarf_x, self.dwarf_y, self.dwarf_image.get_width(), self.dwarf_image.get_height())
-            on_ground = self.dwarf_y >= floor_y - self.dwarf_image.get_height()
-
-        # Проверяем столкновение с платформами
-        if self.dwarf_image:
-            for platform in platforms[self.current_location]:
-                if character_rect.colliderect(platform) and self.vertical_velocity >= 0 and self.dwarf_space:
-                    self.dwarf_y = platform.top - self.dwarf_image.get_height()  # Корректируем положение на платформе
-                    self.dwarf_is_jumping = False  # Завершаем прыжок
-                    self.vertical_velocity = 0  # Останавливаем вертикальную скорость
-
-                    break
-            else:
-                if self.dwarf_y < floor_y - self.dwarf_image.get_height():
-                    self.dwarf_is_jumping = True  # Продолжаем прыжок, если ещё не на земле
-
-                else:
-                    self.dwarf_y = floor_y - self.dwarf_image.get_height()  # Останавливаем на земле
-
-                    self.dwarf_is_jumping = False  # Завершаем прыжок
-                    self.vertical_velocity = 0  # Обнуляем скорость
-                    self.dwarf_space = False  # Персонаж на земле
-
-    def check_boundaries(self, size):
-        # Проверка выхода за границы экрана
-        if self.dwarf_image:
-            if self.dwarf_x >= size[0] - self.dwarf_image.get_width() and self.current_location == 0:
-                self.current_location += 1  # Переход на следующую локацию
-                self.dwarf_x = 0  # Персонаж перемещается в начало экрана
-
-            elif self.dwarf_x <= 0 and self.current_location == 1:
-                self.evil_dwarf_bullets = [] # Очищаем пули злодея
-                self.dwarf_bullets = []  # Очищаем пули
-                self.current_location = 0  # Возвращаемся на предыдущую локацию
-                self.dwarf_x = size[0] - 50  # Персонаж в конец экрана
-
-            # Ограничиваем движение персонажа в пределах экрана
-            self.dwarf_x = max(0, min(self.dwarf_x, size[0] - self.dwarf_image.get_width()))
+        """ВЫХОД НА ЗА ГРАНИЦЫ ЭКРАНА И СМЕНА УРОВНЯ"""
+        self.dwarf_x, self.current_location, self.dwarf_bullets, self.evil_dwarf_bullets = dwarf.dwarf_check_boundaries(
+            size, self.current_location, self.dwarf_x, self.dwarf_bullets, self.evil_dwarf_bullets
+        )
 
     def shoot(self, keys):
         """Стрельбы в перса и стрельба самого перса"""
+
         # Стрельба в перса
         check_dwarf_rect = False
-        if self.dwarf_image and self.current_location == 1:
+        if self.dwarf_image and self.current_location == 0:
             dwarf_rect = pygame.Rect(self.dwarf_x, self.dwarf_y, self.dwarf_image.get_width(), self.dwarf_image.get_height())
             check_dwarf_rect = True
 
@@ -137,72 +102,108 @@ class GameDwarf:
 
 
         # Стрельба персонажа
-        if keys[pygame.K_SPACE] and self.dwarf_can_shoot:  # Если нажата пробел и можно стрелять
-            bullet_rect = pygame.Rect(self.dwarf_x + self.dwarf_image.get_width() // 2,
-                                      self.dwarf_y + self.dwarf_image.get_height() // 2,
-                                      self.bullet_image.get_width(),
-                                      self.bullet_image.get_height())  # Создаем прямоугольник для пули
+        # if keys[pygame.K_SPACE] and self.dwarf_can_shoot:  # Если нажата пробел и можно стрелять
+        #     bullet_rect = pygame.Rect(self.dwarf_x + self.dwarf_image.get_width() // 2,
+        #                               self.dwarf_y + self.dwarf_image.get_height() // 2,
+        #                               self.bullet_image.get_width(),
+        #                               self.bullet_image.get_height()
+        #                               ) # Создаем прямоугольник для пули
 
-            self.dwarf_bullets.append((bullet_rect, self.dwarf_shoot_direction))  # Добавляем пулю в список
-            self.dwarf_can_shoot = False  # Запрещаем стрельбу до следующего нажатия
+        if keys[pygame.K_w] and keys[pygame.K_d] and self.dwarf_can_shoot:  # Если нажата пробел и можно стрелять
+            keyboard = 'w-d'
+            print(keyboard)
+            # bullet_rect = pygame.Rect(self.dwarf_x + self.dwarf_image.get_width() // 2,
+            #                           self.dwarf_y + self.dwarf_image.get_height() // 2,
+            #                           self.bullet_image.get_width(),
+            #                           self.bullet_image.get_height()
+            #                           ) # Создаем прямоугольник для пули
+            # self.dwarf_bullets.append((bullet_rect, self.dwarf_shoot_direction, keyboard)) # Добавляем пулю в список
+            # self.dwarf_can_shoot = False  # Запрещаем стрельбу до следующего нажатия
 
-        if not keys[pygame.K_SPACE]:  # Если пробел отпущен
-            self.dwarf_can_shoot = True  # Разрешаем стрельбу снова
+        if keys[pygame.K_a] and keys[pygame.K_w] and self.dwarf_can_shoot:  # Если нажата пробел и можно стрелять
+            keyboard = 'w-a'
+            print(keyboard)
+            # bullet_rect = pygame.Rect(self.dwarf_x + self.dwarf_image.get_width() // 2,
+            #                           self.dwarf_y + self.dwarf_image.get_height() // 2,
+            #                           self.bullet_image.get_width(),
+            #                           self.bullet_image.get_height()
+            #                           ) # Создаем прямоугольник для пули
+            # self.dwarf_bullets.append((bullet_rect, self.dwarf_shoot_direction, keyboard)) # Добавляем пулю в список
+            # self.dwarf_can_shoot = False  # Запрещаем стрельбу до следующего нажатия
+
+        if not keys[pygame.K_w] and not keys[pygame.K_d]:
+            self.dwarf_can_shoot = True
+
+        if not keys[pygame.K_w] and not keys[pygame.K_a]:
+            self.dwarf_can_shoot = True
+
+        # if not keys[pygame.K_SPACE]:  # Если пробел отпущен
+        #     self.dwarf_can_shoot = True  # Разрешаем стрельбу снова
 
     def update_bullets(self, size):
         # Обновление положения пуль
-        for bullet, direction in self.dwarf_bullets:
-            bullet.x += self.dwarf_bullet_speed * direction  # Двигаем пулю в направлении
+        for bullet, direction, keyboard in self.dwarf_bullets:
+
+            if keyboard == 'w-d':
+                bullet.x += self.dwarf_bullet_speed * 1 # Двигаем пулю в направлении
+                bullet.y -= self.dwarf_bullet_speed * 1
+
+            if keyboard == 'w-a':
+                bullet.x -= self.dwarf_bullet_speed * 1 # Двигаем пулю в направлении
+                bullet.y -= self.dwarf_bullet_speed * 1
+
 
         # Удаляем пули, которые вышли за экран
-        self.dwarf_bullets = [(bullet, direction) for bullet, direction in self.dwarf_bullets if bullet.x > 0 and bullet.x < size[0]]
+        self.dwarf_bullets = [(bullet, direction, keyboard) for bullet, direction, keyboard in self.dwarf_bullets if bullet.x > 0 and bullet.x < size[0]]
 
     def evil_dwarf_main(self):
-        """Функция ЗЛОГО ГНОМА (ПРОТИВНИКА)"""
-
-        #____________ВЕДЕМ ОГОНЬ ПО ГЛ ГЕРОЮ__________________________________
-        # Проверяем расстояние до главного героя
-        distance_x = self.dwarf_x - self.evil_dwarf_x
-        shot_timer = time.time()  # Текущее время в секундах
-        if self.current_location == 0 and self.evil_dwarf_image and abs(distance_x) < 400 and (shot_timer - self.evil_dwarf_timer_shot > shot_delay):  # Если герой близко, создаем пулю
-            # Создаем пулю на уровне злого гнома
-            EVIL_bullet_rect = pygame.Rect(self.evil_dwarf_x + self.evil_dwarf_image.get_width() // 2,
-                                           self.evil_dwarf_y + self.evil_dwarf_image.get_height() // 2,
-                                           self.bullet_image.get_width(),
-                                           self.bullet_image.get_height())  # Создаем прямоугольник для пули
-
-            # Определяем направление стрельбы
-            direction = 1 if distance_x > 0 else -1  # Если герой слева, стреляем влево, иначе вправо
-            self.evil_dwarf_bullets.append((EVIL_bullet_rect, direction))  # Добавляем пулю в список
-            self.evil_dwarf_timer_shot = shot_timer
-
-        # Обновление положения пуль злого гнома
-        if self.current_location == 0:
-            for bullet, direction in self.evil_dwarf_bullets:
-                bullet.x += 1 * direction  # Двигаем пулю в направлении
-
-            # Удаляем пули, которые вышли за экран
-            self.evil_dwarf_bullets = [(bullet, direction) for bullet, direction in self.evil_dwarf_bullets if
-                                       0 < bullet.x < size[0]]
-        else:
-            self.evil_dwarf_bullets = []
-        #________________СТРЕЛЬБА В ЗЛОГО ГНОМА______________________________
-        check_evil_dwarf_rect = False
-        if self.evil_dwarf_image:
-            evil_dwarf_rect = pygame.Rect(self.evil_dwarf_x, self.evil_dwarf_y, self.evil_dwarf_image.get_width(), self.evil_dwarf_image.get_height())
-            check_evil_dwarf_rect = True
-
-        # Если злой гном существует, проверяем столкновения
-        for bullet, _ in self.dwarf_bullets:
-            if check_evil_dwarf_rect:
-                if evil_dwarf_rect.colliderect(bullet):
-                    self.evil_dwarf_image = None  # Убираем злого гнома
-                    break  # Прерываем цикл после попадания
-
-        # ________________СТРЕЛЬБА В ЗЛОГО ГНОМА______________________________
-
-        """Функция перемещения гнома"""
-        self.evil_dwarf_x = evil_dwarf.actions_evil_dwarf(evil_dwarf, size) # Перемещение
+        pass
+        # """Функция ЗЛОГО ГНОМА (ПРОТИВНИКА)"""
+        #
+        # # ____________ВЕДЕМ ОГОНЬ ПО ГЛ ГЕРОЮ__________________________________
+        # # Проверяем расстояние до главного героя
+        # distance_x = self.dwarf_x - self.evil_dwarf_x
+        # shot_timer = time.time()  # Текущее время в секундах
+        # if self.current_location == 0 and self.evil_dwarf_image and abs(distance_x) < 400 and (shot_timer - self.evil_dwarf_timer_shot > shot_delay):  # Если герой близко, создаем пулю
+        #     # Создаем пулю на уровне злого гнома
+        #     EVIL_bullet_rect = pygame.Rect(self.evil_dwarf_x + self.evil_dwarf_image.get_width() // 2,
+        #                                    self.evil_dwarf_y + self.evil_dwarf_image.get_height() // 2,
+        #                                    self.bullet_image.get_width(),
+        #                                    self.bullet_image.get_height())  # Создаем прямоугольник для пули
+        #
+        #     # Определяем направление стрельбы
+        #     direction = 1 if distance_x > 0 else -1  # Если герой слева, стреляем влево, иначе вправо
+        #     self.evil_dwarf_bullets.append((EVIL_bullet_rect, direction))  # Добавляем пулю в список
+        #     self.evil_dwarf_timer_shot = shot_timer
+        #
+        # # Обновление положения пуль злого гнома
+        # if self.current_location == 0:
+        #     for bullet, direction in self.evil_dwarf_bullets:
+        #         bullet.x += 1 * direction  # Двигаем пулю в направлении
+        #
+        #     # Удаляем пули, которые вышли за экран
+        #     self.evil_dwarf_bullets = [(bullet, direction) for bullet, direction in self.evil_dwarf_bullets if 0 < bullet.x < size[0]]
+        # else:
+        #     self.evil_dwarf_bullets = []
+        #
+        #
+        # # ________________СТРЕЛЬБА В ЗЛОГО ГНОМА______________________________
+        # check_evil_dwarf_rect = False
+        # if self.evil_dwarf_image:
+        #     evil_dwarf_rect = pygame.Rect(self.evil_dwarf_x, self.evil_dwarf_y, self.evil_dwarf_image.get_width(), self.evil_dwarf_image.get_height())
+        #     check_evil_dwarf_rect = True
+        #
+        # # Если злой гном существует, проверяем столкновения
+        # for bullet, _ in self.dwarf_bullets:
+        #     if check_evil_dwarf_rect:
+        #         if evil_dwarf_rect.colliderect(bullet):
+        #             self.evil_dwarf_image = None  # Убираем злого гнома
+        #             break  # Прерываем цикл после попадания
+        #
+        #
+        # # ________________СТРЕЛЬБА В ЗЛОГО ГНОМА______________________________
+        # """Функция перемещения гнома"""
+        # self.evil_dwarf_x = evil_dwarf.actions_evil_dwarf(evil_dwarf, size) # Перемещение
 
     def draw(self, screen):
         # Отрисовка элементов игры
@@ -216,14 +217,20 @@ class GameDwarf:
         # Отображение персонажа
         if self.dwarf_image:
             screen.blit(self.dwarf_image, [self.dwarf_x, self.dwarf_y])
+        #
+        # """ОТОБРАЖЕНИЕ EVIL DWARF"""
+        # # Если злой гном существует, рисуем его
+        # if self.evil_dwarf_image and self.current_location == 0:
+        #     screen.blit(self.evil_dwarf_image, (self.evil_dwarf_x, self.evil_dwarf_y))
 
         """ОТОБРАЖЕНИЕ EVIL DWARF"""
         # Если злой гном существует, рисуем его
         if self.evil_dwarf_image and self.current_location == 0:
-            screen.blit(self.evil_dwarf_image, (self.evil_dwarf_x, self.evil_dwarf_y))
+            screen.blit(self.evil_dwarf_image, (600, 200))
+
 
         # Отображение пуль
-        for bullet, _ in self.dwarf_bullets:
+        for bullet, _, _ in self.dwarf_bullets:
             screen.blit(self.bullet_image, (bullet.x, bullet.y))  # Отображаем пули
 
         for bullet, _ in self.evil_dwarf_bullets:
@@ -235,10 +242,8 @@ class GameDwarf:
         while self.runGame:
             self.handle_events()
             keys = pygame.key.get_pressed()
-            self.move_dwarf(keys)
+            self.dwarf(keys, jump_delay, floor_y, size) # Функция работы гл героя
             self.evil_dwarf_main()
-            self.apply_gravity(floor_y)
-            self.check_boundaries(size)
             self.shoot(keys)
             self.update_bullets(size)
             self.draw(screen)
@@ -258,7 +263,7 @@ def initialize_game():
     screen = pygame.display.set_mode(size, pygame.RESIZABLE)
     pygame.display.set_caption("DWARF")
 
-    floor_y = screen_height - 60
+    floor_y = screen_height - 70
     platforms_list = platforms(screen_width, screen_height)
     background_images_list = background_images(size)
 
