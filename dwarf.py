@@ -6,17 +6,14 @@ class Dwarf:
     def __init__(self, screen_height):
         self.dwarf_image = None
         # Начальная позиция персонажа
-        self.dwarf_x = 50 # Положение слева
-        self.dwarf_y = screen_height - 100 # Вычисляем высоту пола
+        self.dwarf_x = 70 # Положение слева
+        self.dwarf_y = screen_height # Вычисляем высоту пола
         self.dwarf_speed = 1  # Скорость перемещения персонажа
         self.dwarf_is_jumping = False
-        self.dwarf_jump_speed = 8  # Начальная высота прыжка
+        self.dwarf_jump_speed = 12  # Начальная скорость прыжка
         self.dwarf_bullets = [] # Список для хранения пуль
 
         self.dwarf_bullet_speed = 3 # Скорость пуль
-
-        # Переменная для хранения направления стрельбы
-        self.dwarf_shoot_direction = 1  # 1 - вправо, -1 - влево
 
         self.dwarf_can_shoot = True # Флаг для проверки, можно ли стрелять
         self.dwarf_space = True # Проверка на пыжок
@@ -36,7 +33,6 @@ class Dwarf:
             'jump_speed': self.dwarf_jump_speed, # Начальная высота прыжка
             'dwarf_bullets': self.dwarf_bullets, # Список для хранения пуль
             'dwarf_bullet_speed': self.dwarf_bullet_speed, # Скорость пуль
-            'dwarf_shoot_direction': self.dwarf_shoot_direction, # Направление выстрела
             'dwarf_can_shoot': self.dwarf_can_shoot,
             'dwarf_space': self.dwarf_space,
         }
@@ -46,24 +42,22 @@ class Dwarf:
         if keys[pygame.K_LEFT]:
             self.dwarf_x = dwarf_x
             self.dwarf_x -= self.dwarf_speed
-            self.dwarf_shoot_direction = -1  # Устанавливаем направление стрельбы влево
 
             # Перемещаем гнома влево и задаем направление стрельбы
-            return self.dwarf_x, self.dwarf_shoot_direction
+            return self.dwarf_x
 
-        return dwarf_x, self.dwarf_shoot_direction
+        return dwarf_x
 
 
     def moving_the_dwarf_RIGHT(self, keys, dwarf_x):
         if keys[pygame.K_RIGHT]:
             self.dwarf_x = dwarf_x
             self.dwarf_x += self.dwarf_speed
-            self.dwarf_shoot_direction = 1  # Устанавливаем направление стрельбы влево
 
             # Перемещаем гнома вправо и задаем направление стрельбы
-            return self.dwarf_x, self.dwarf_shoot_direction
+            return self.dwarf_x
 
-        return dwarf_x, self.dwarf_shoot_direction
+        return dwarf_x
 
     def dwarf_is_jumping_K_UP(self, dwarf_is_jumping, keys, vertical_velocity, current_time, jump_delay, jump_speed, last_jump_time):
         # Проверка на прыжок: можно прыгать только после задержки
@@ -77,7 +71,7 @@ class Dwarf:
 
         return dwarf_is_jumping, vertical_velocity, self.dwarf_space, last_jump_time
 
-    def dwarf_apply_gravity(self, data):
+    def dwarf_apply_gravity(self, data, size):
         # Применение гравитации и обновление положения персонажа
         if data['dwarf_is_jumping']:
             data['dwarf_y'] += data['vertical_velocity']  # Обновляем положение по Y с учётом скорости
@@ -90,11 +84,15 @@ class Dwarf:
         # Проверяем коллизии с платформами и полом
         if self.dwarf_image:
             character_rect = pygame.Rect(data['dwarf_x'], data['dwarf_y'], self.dwarf_image.get_width(), self.dwarf_image.get_height())
-            on_ground = data['dwarf_y'] >= data['floor_y'] - self.dwarf_image.get_height()
 
             # Проверяем столкновение с платформами
             for platform in data['platforms'][data['current_location']]:
-                if character_rect.colliderect(platform) and data['vertical_velocity'] >= 0 and data['dwarf_space']:
+                if (character_rect.colliderect(platform)) and \
+                   (data['vertical_velocity'] >= 0) and \
+                   (character_rect.bottom <= platform.top + 10) and \
+                   (platform.bottom > character_rect.bottom) and \
+                   (character_rect.bottom > platform.top): # Проверка, что персонаж сверху платформы
+
                     data['dwarf_y'] = platform.top - self.dwarf_image.get_height()  # Корректируем положение на платформе
                     data['dwarf_is_jumping'] = False  # Завершаем прыжок
                     data['vertical_velocity'] = 0  # Останавливаем вертикальную скорость

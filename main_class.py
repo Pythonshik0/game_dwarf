@@ -9,8 +9,8 @@ class TheEvilDwarf:
         self.evil_dwarf_image = None
         self.dwarf_image = None
         # Начальная позиция персонажа
-        self.evil_dwarf_x = 1200 # Положение слева
-        self.evil_dwarf_y = screen_height - 170 # Вычисляем высоту пола
+        self.evil_dwarf_x = 600 # Положение слева
+        self.evil_dwarf_y = 200 # Вычисляем высоту пола
 
         self.evil_check_x = True # Переменная для отслеживания перемещения вправо или влево
 
