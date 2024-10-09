@@ -5,7 +5,7 @@ import time
 
 from main_class import TheEvilDwarf
 from dwarf import Dwarf
-from platforms import platforms, background_images, save_home, ladders
+from platforms import platforms, background_images, ladders, StaticObject
 
 jump_speed = 16  # Начальная скорость прыжка
 gravity = 0.9  # Сила гравитации (ускорение падения)
@@ -19,10 +19,6 @@ class GameDwarf:
     def __init__(self, dwarf, evil_dwarf):
         # Инициализация игры
         self.runGame = True
-
-        # Точка спавна
-        self.home_image = pygame.image.load('media/image_main/Save.png')
-        self.home_image = pygame.transform.scale(self.home_image, (250, 250))  # Масштабируем изображение по необходимости
 
         # Параметры персонажа
         self.dwarf_x = dwarf.dwarf_characteristics()['dwarf_x']  # Положение по оси X
@@ -38,21 +34,30 @@ class GameDwarf:
         self.dwarf_can_shoot_DUBLE = True
 
         # Злодеи 0 lvl
+        self.evil_dwarf_timer_shot = 0  # Таймер выстрела
         self.evil_dwarf_bullets = [] # Выстрелы злодея
         self.evil_dwarf_image = evil_dwarf.evil_dwarf_characteristics()['evil_dwarf_image']  # Изображение персонажа
         self.evil_dwarf_x = evil_dwarf.evil_dwarf_characteristics()['evil_dwarf_x']
         self.evil_dwarf_y = evil_dwarf.evil_dwarf_characteristics()['evil_dwarf_y']
 
-
         # Общие переменные
-        self.evil_dwarf_timer_shot = 0 # Таймер выстрела
         self.vertical_velocity = 0  # Вертикальная скорость
         self.current_location = 0  # Текущая локация
         self.last_jump_time = 0  # Время последнего прыжка
 
         # Загрузка изображения пули
         self.bullet_image = pygame.image.load('media/image_main/Сфера-1-lvl.png')
-        self.bullet_image = pygame.transform.scale(self.bullet_image, (50, 50))  # Масштабируем изображение пули
+        self.bullet_image = pygame.transform.scale(self.bullet_image, (30, 30))  # Масштабируем изображение пули
+
+        # Дверь на следующий уровень
+        door_image = pygame.image.load('media/image_main/дверь-закрытая.png').convert_alpha()
+        image_size = 100, 150
+        self.door = StaticObject(door_image, (1250, 80), image_size) # Создаем наш объект
+
+        # Точка spawn
+        home_image = pygame.image.load('media/image_main/Save.png').convert_alpha()
+        image_size = 250, 250
+        self.home_image = StaticObject(home_image, (0, 511), image_size) # Создаем наш объект
 
     def handle_events(self):
         # Обработка событий (закрытие окна)
@@ -63,6 +68,16 @@ class GameDwarf:
     def dwarf(self, keys, jump_delay, floor_y, size):
         """Управление движением персонажа (гл. герой)"""
         current_time = time.time()  # Текущее время в секундах
+        character_rect = pygame.Rect(self.dwarf_x, self.dwarf_y, self.dwarf_image.get_width(), self.dwarf_image.get_height())
+
+        """ДВИЖЕНИЕ ПО ЛЕСТНИЦЕ"""
+        self.vertical_velocity, self.dwarf_y = dwarf.move_ladders(data={
+            'dwarf_y': self.dwarf_y, 'ladders': ladders, 'current_location': self.current_location, 'character_rect': character_rect, 'vertical_velocity': self.vertical_velocity, 'keys': keys
+        })
+
+        """ПЕРЕХОД НА СЛЕДУЮЩИЙ УРОВЕНЬ (ДВЕРЬ)"""
+        if character_rect.colliderect(self.door):
+            pass
 
         """ДВИЖЕНИЕ DWARF"""
         self.dwarf_x = dwarf.moving_the_dwarf_LEFT(keys, self.dwarf_x) # Движение влево
@@ -74,12 +89,11 @@ class GameDwarf:
         )
 
         """ГРАВИТАЦИЯ И ОБНОВЛЕНИЕ ПЕРСОНАЖА НА КАРТЕ"""
-        data = {
+        self.dwarf_space, self.vertical_velocity, self.dwarf_is_jumping, self.dwarf_y, self.dwarf_x = dwarf.dwarf_apply_gravity(data={
             'dwarf_space': self.dwarf_space, 'dwarf_is_jumping': self.dwarf_is_jumping, 'dwarf_y': self.dwarf_y,
             'dwarf_x': self.dwarf_x, 'floor_y': floor_y, 'vertical_velocity': self.vertical_velocity,
             'gravity': gravity, 'max_fall_speed': max_fall_speed, 'current_location': self.current_location, 'platforms': platforms
-        }
-        self.dwarf_space, self.vertical_velocity, self.dwarf_is_jumping, self.dwarf_y, self.dwarf_x = dwarf.dwarf_apply_gravity(data, size)
+        })
 
         """ВЫХОД НА ЗА ГРАНИЦЫ ЭКРАНА И СМЕНА УРОВНЯ"""
         self.dwarf_x, self.current_location, self.dwarf_bullets, self.evil_dwarf_bullets = dwarf.dwarf_check_boundaries(
@@ -123,7 +137,7 @@ class GameDwarf:
         self.dwarf_bullets.append((bullet_rect, direction))
 
     def _check_for_dwarf_collision(self):
-        """Проверка на столкновение с злым гномом"""
+        """Проверка на столкновение с выстрелом злого гнома"""
         check_dwarf_rect = False
         if self.dwarf_image:
             dwarf_rect = pygame.Rect(self.dwarf_x, self.dwarf_y, self.dwarf_image.get_width(), self.dwarf_image.get_height())
@@ -191,41 +205,51 @@ class GameDwarf:
             evil_dwarf_rect = pygame.Rect(self.evil_dwarf_x, self.evil_dwarf_y, self.evil_dwarf_image.get_width(), self.evil_dwarf_image.get_height())
             check_evil_dwarf_rect = True
 
-        # Если злой гном существует, проверяем столкновения
-        for bullet, _ in self.dwarf_bullets:
-            if check_evil_dwarf_rect:
-                if evil_dwarf_rect.colliderect(bullet):
-                    self.evil_dwarf_image = None  # Убираем злого гнома
-                    self.dwarf_bullets.remove((bullet, _))  # Удаляем пулю из списка
-                    break  # Прерываем цикл после попадания
+            # Если злой гном существует, проверяем столкновения
+            dwarf_bullet_rects = [bullet for bullet, _ in self.dwarf_bullets]
+            collided_indices = evil_dwarf_rect.collidelistall(dwarf_bullet_rects)
+            if collided_indices:
+                self.evil_dwarf_image = None  # Убираем злого гнома
+                # Удаляем все столкнувшиеся пули
+                for index in sorted(collided_indices, reverse=True):
+                    del self.dwarf_bullets[index]
+
+        # for bullet, _ in self.dwarf_bullets:
+        #     if check_evil_dwarf_rect:
+        #         if evil_dwarf_rect.colliderect(bullet):
+        #             self.evil_dwarf_image = None  # Убираем злого гнома
+        #             self.dwarf_bullets.remove((bullet, _))  # Удаляем пулю из списка
+        #             break  # Прерываем цикл после попадания
 
 
         # # ________________СТРЕЛЬБА В ЗЛОГО ГНОМА______________________________
         # """Функция перемещения гнома"""
         # self.evil_dwarf_x = evil_dwarf.actions_evil_dwarf(evil_dwarf, size) # Перемещение
 
+
     def draw(self, screen):
         # Отрисовка элементов игры
         screen.blit(background_images[self.current_location], [0, 0])  # Отображаем фон
 
-        # Отображаем точки спавна (сохранение)
-        for home in save_home():
-            screen.blit(self.home_image, (home.x, home.y))  # Отображаем спавн точки
+
+        self.home_image.draw(screen) # Отображаем место spawn
+        self.door.draw(screen) # Отображаем переход на след уровень
 
         # Отображение платформ
-        for platform in platforms[self.current_location]:
-            black_square = pygame.Surface((platform.width, platform.height))
+        # for platform in platforms[self.current_location]:
+        #     black_square = pygame.Surface((platform.width, platform.height))
+        #
+        #     # Задаем цвет поверхности (черный)
+        #     black_square.fill((0, 0, 0))  # RGB (0, 0, 0) – черный цвет
+        #     screen.blit(black_square, (platform.x, platform.y)) # Отображаем платформы
 
-            # Задаем цвет поверхности (черный)
-            black_square.fill((0, 0, 0))  # RGB (0, 0, 0) – черный цвет
-            screen.blit(black_square, (platform.x, platform.y)) # Отображаем платформы
-
-        for ladder in ladders[self.current_location]:
-            black_square = pygame.Surface((ladder.width, ladder.height))
-
-            # Задаем цвет поверхности (черный)
-            black_square.fill((0, 0, 0))  # RGB (0, 0, 0) – черный цвет
-            screen.blit(black_square, (ladder.x, ladder.y)) # Отображаем платформы
+        # Отображаем лестницу на 0 уровне
+        # for ladder in ladders[self.current_location]:
+        #     black_square = pygame.Surface((ladder.width, ladder.height))
+        #
+        #     # Задаем цвет поверхности (черный)
+        #     black_square.fill((0, 0, 0))  # RGB (0, 0, 0) – черный цвет
+        #     screen.blit(black_square, (ladder.x, ladder.y)) # Отображаем платформы
 
         # Отображение персонажа
         if self.dwarf_image:
@@ -243,7 +267,6 @@ class GameDwarf:
 
         for bullet, _ in self.evil_dwarf_bullets:
             screen.blit(self.bullet_image, (bullet.x, bullet.y))  # Отображаем пули
-
 
         # # Создаем полупрозрачный черный слой
         # dark_overlay = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)
@@ -299,9 +322,6 @@ if __name__ == "__main__":
     # Обработка косячной картинки
     image = Image.open("media/image_main/platform_1.png")
     image.save("media/image_main/platform_1_fixed.png", icc_profile=None)
-
-    image = Image.open("media/image_main/Пол-1-лвл.png")
-    image.save("media/image_main/Пол-1-лвл(2).png", icc_profile=None)
 
     size, screen, floor_y, platforms, background_images, ladders = initialize_game()
 

@@ -5,6 +5,7 @@ import os
 class Dwarf:
     def __init__(self, screen_height):
         self.dwarf_image = None
+
         # Начальная позиция персонажа
         self.dwarf_x = 70 # Положение слева
         self.dwarf_y = screen_height # Вычисляем высоту пола
@@ -13,7 +14,7 @@ class Dwarf:
         self.dwarf_jump_speed = 12  # Начальная скорость прыжка
         self.dwarf_bullets = [] # Список для хранения пуль
 
-        self.dwarf_bullet_speed = 3 # Скорость пуль
+        self.dwarf_bullet_speed = 2 # Скорость пуль
 
         self.dwarf_can_shoot = True # Флаг для проверки, можно ли стрелять
         self.dwarf_space = True # Проверка на пыжок
@@ -71,7 +72,7 @@ class Dwarf:
 
         return dwarf_is_jumping, vertical_velocity, self.dwarf_space, last_jump_time
 
-    def dwarf_apply_gravity(self, data, size):
+    def dwarf_apply_gravity(self, data):
         # Применение гравитации и обновление положения персонажа
         if data['dwarf_is_jumping']:
             data['dwarf_y'] += data['vertical_velocity']  # Обновляем положение по Y с учётом скорости
@@ -110,20 +111,30 @@ class Dwarf:
 
     def dwarf_check_boundaries(self, size, current_location, dwarf_x, dwarf_bullets, evil_dwarf_bullets):
         # Проверка выхода за границы экрана
-        if self.dwarf_image:
-            if dwarf_x >= size[0] - self.dwarf_image.get_width() and current_location == 0:
-                current_location += 1  # Переход на следующую локацию
-                dwarf_x = 0  # Персонаж перемещается в начало экрана
+        # if self.dwarf_image:
+        #     if dwarf_x >= size[0] - self.dwarf_image.get_width() and current_location == 0:
+        #         current_location += 1  # Переход на следующую локацию
+        #         dwarf_x = 0  # Персонаж перемещается в начало экрана
+        #
+        #     elif dwarf_x <= 0 and current_location == 1:
+        #         evil_dwarf_bullets = [] # Очищаем пули злодея
+        #         dwarf_bullets = []  # Очищаем пули
+        #         current_location = 0  # Возвращаемся на предыдущую локацию
+        #         dwarf_x = size[0] - 50  # Персонаж в конец экрана
 
-            elif dwarf_x <= 0 and current_location == 1:
-                evil_dwarf_bullets = [] # Очищаем пули злодея
-                dwarf_bullets = []  # Очищаем пули
-                current_location = 0  # Возвращаемся на предыдущую локацию
-                dwarf_x = size[0] - 50  # Персонаж в конец экрана
-
-            # Ограничиваем движение персонажа в пределах экрана
-            dwarf_x = max(0, min(dwarf_x, size[0] - self.dwarf_image.get_width()))
+        # Ограничиваем движение персонажа в пределах экрана
+        dwarf_x = max(0, min(dwarf_x, size[0] - self.dwarf_image.get_width()))
 
         return dwarf_x, current_location, dwarf_bullets, evil_dwarf_bullets
 
+    def move_ladders(self, data):
+        for ladder in data['ladders'][data['current_location']]:
+            if data['character_rect'].colliderect(ladder):
+                data['vertical_velocity'] = 0 # Останавливаем вертикальное движение
+                if data['keys'][pygame.K_DOWN]: # Спуск вниз
+                    data['dwarf_y'] += 1
+                elif data['keys'][pygame.K_UP]: # Подъем вверх
+                    data['dwarf_y'] -= 1
+
+        return data['vertical_velocity'], data['dwarf_y']
 
