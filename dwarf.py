@@ -3,21 +3,23 @@ import os
 
 
 class Dwarf:
-    def __init__(self, screen_height):
+    def __init__(self, screen_height, platforms):
         self.dwarf_image = None
 
         # Начальная позиция персонажа
         self.dwarf_x = 70 # Положение слева
         self.dwarf_y = screen_height # Вычисляем высоту пола
-        self.dwarf_speed = 1  # Скорость перемещения персонажа
+        self.dwarf_speed = 0.6  # Скорость перемещения персонажа
         self.dwarf_is_jumping = False
         self.dwarf_jump_speed = 12  # Начальная скорость прыжка
         self.dwarf_bullets = [] # Список для хранения пуль
 
-        self.dwarf_bullet_speed = 2 # Скорость пуль
+        self.dwarf_bullet_speed = 1 # Скорость пуль
 
         self.dwarf_can_shoot = True # Флаг для проверки, можно ли стрелять
         self.dwarf_space = True # Проверка на пыжок
+
+        self.platforms = platforms # Платформы
 
     def dwarf_characteristics(self):
         # Загрузка спрайта персонажа
@@ -87,7 +89,7 @@ class Dwarf:
             character_rect = pygame.Rect(data['dwarf_x'], data['dwarf_y'], self.dwarf_image.get_width(), self.dwarf_image.get_height())
 
             # Проверяем столкновение с платформами
-            for platform in data['platforms'][data['current_location']]:
+            for platform in self.platforms[data['current_location']]:
                 if (character_rect.colliderect(platform)) and \
                    (data['vertical_velocity'] >= 0) and \
                    (character_rect.bottom <= platform.top + 10) and \
@@ -137,4 +139,15 @@ class Dwarf:
                     data['dwarf_y'] -= 1
 
         return data['vertical_velocity'], data['dwarf_y']
+
+    def collision_platform(self, data):
+        dwarf_bullet_rects = [bullet for bullet, _ in data['dwarf_bullets']]
+
+        for platform in self.platforms[data['current_location']]:
+            collided_indices = platform.collidelistall(dwarf_bullet_rects)
+            if collided_indices:
+                for index in collided_indices:  # Удаляем все столкнувшиеся пули
+                    del data['dwarf_bullets'][index]
+
+        return data['dwarf_bullets']
 

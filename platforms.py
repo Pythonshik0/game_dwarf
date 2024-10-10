@@ -28,6 +28,22 @@ def platforms(screen_width, screen_height):
         ]
     ]
 
+def bounding_box_ghost(screen_width, screen_height):
+    return [
+        # Платформы для первой локации
+        [
+            pygame.Rect(int(screen_width * 0.1), int(screen_height * 0.01), int(screen_width * 0.8), # Верхний чек бокс
+                        int(screen_width * 0.15)),
+
+            pygame.Rect(int(screen_width * 0.1), int(screen_height * 0.35), int(screen_width * 0.8), # Нижний чек бокс
+                        int(screen_width * 0.15))
+        ],
+        [
+
+        ]
+    ]
+
+
 
 def ladders(screen_width, screen_height):
     return [
