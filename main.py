@@ -303,17 +303,17 @@ class GameDwarf:
         #     screen.blit(black_square, (bounding.x, bounding.y)) # Отображаем платформы
 
         # Отображаем лестницу на 0 уровне
-        # for ladder in ladders[self.current_location]:
-        #     black_square = pygame.Surface((ladder.width, ladder.height))
-        #
-        #     # Задаем цвет поверхности (черный)
-        #     black_square.fill((0, 0, 0))  # RGB (0, 0, 0) – черный цвет
-        #     screen.blit(black_square, (ladder.x, ladder.y)) # Отображаем платформы
+        for ladder in ladders[self.current_location]:
+            black_square = pygame.Surface((ladder.width, ladder.height))
+
+            # Задаем цвет поверхности (черный)
+            black_square.fill((0, 0, 0))  # RGB (0, 0, 0) – черный цвет
+            screen.blit(black_square, (ladder.x, ladder.y)) # Отображаем платформы
 
         # Отображение персонажа
-        if self.dwarf_image:
-            screen.blit(self.dwarf_image, [self.dwarf_x, self.dwarf_y])
-
+        # if self.dwarf_image:
+        #     screen.blit(self.dwarf_image, [self.dwarf_x, self.dwarf_y])
+        screen.blit(self.dwarf_image, (self.dwarf_x, self.dwarf_y))
         """ОТОБРАЖЕНИЕ GHOST"""
         # Если злой гном существует, рисуем его
         if self.ghost_image and self.current_location == 0:

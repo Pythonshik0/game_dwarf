@@ -20,13 +20,62 @@ class Dwarf:
         self.dwarf_space = True # Проверка на пыжок
 
         self.platforms = platforms # Платформы
+        # Загрузка частей персонажа
+        self.leg_image = pygame.image.load("media/image_main/нога.png").convert_alpha()
+        self.head_image = pygame.image.load("media/image_main/голова.png").convert_alpha()
+        self.body_image = pygame.image.load("media/image_main/туловище.png").convert_alpha()
+        self.arm_image = pygame.image.load("media/image_main/рука.png").convert_alpha()
+
+        # Сохранение размеров частей
+        self.leg_width, self.leg_height = self.leg_image.get_size()
+        self.head_width, self.head_height = self.head_image.get_size()
+        self.body_width, self.body_height = self.body_image.get_size()
+        self.arm_width, self.arm_height = self.arm_image.get_size()
+
+        # Создание единого изображения персонажа
+        self.create_dwarf_image()
+
+    def create_dwarf_image(self):
+        """Создание единого изображения персонажа из частей."""
+        extra_space_for_arms = self.arm_width
+
+        # Рассчитываем общие размеры персонажа
+        dwarf_width = (max(self.head_width, self.body_width, self.leg_width) + 2 * extra_space_for_arms)  # Добавляем место для рук
+        dwarf_height = self.head_height + self.body_height + self.leg_height  # Высота персонажа
+
+        # Создаем пустое изображение для персонажа
+        self.dwarf_image = pygame.Surface((dwarf_width, dwarf_height), pygame.SRCALPHA)
+
+        # Рассчитываем координаты для каждой части
+        leg_y = dwarf_height - self.leg_height
+        body_y = leg_y - self.body_height
+        head_y = body_y - self.head_height
+        arm_y = body_y   # Рука чуть выше туловища
+
+        # Координаты для рук
+        arm_x_left = 5  # Левая рука будет в самой левой части изображения
+        arm_x_right = dwarf_width - self.arm_width - 5 # Правая рука будет в правой части изображения
+
+        # Отзеркаливание правой руки
+        self.right_arm_flipped = pygame.transform.flip(self.arm_image, True, False)  # Отзеркалить по горизонтали
+
+        # Отрисовка частей персонажа на общем изображении
+        self.dwarf_image.blit(self.leg_image, (extra_space_for_arms, leg_y))  # Ноги
+        self.dwarf_image.blit(self.leg_image, (extra_space_for_arms + 10, leg_y))  # Ноги
+        self.dwarf_image.blit(self.body_image, (extra_space_for_arms, body_y))  # Туловище
+        self.dwarf_image.blit(self.head_image, (extra_space_for_arms, head_y))  # Голова
+
+        # Отрисовка двух рук: левой и правой
+        self.dwarf_image.blit(self.arm_image, (arm_x_left, arm_y))  # Левая рука
+        self.dwarf_image.blit(self.right_arm_flipped, (arm_x_right, arm_y))  # Правая рука
+
 
     def dwarf_characteristics(self):
         # Загрузка спрайта персонажа
-        dwarf = pygame.image.load("media/image_main/dworf.png").convert_alpha()
+        # dwarf = pygame.image.load("media/image_main/dworf.png").convert_alpha()
 
         # Задание нового размера персонажа (например, 100x100 пикселей)
-        self.dwarf_image = pygame.transform.scale(dwarf, (100, 100))
+        self.dwarf_image = pygame.transform.scale(self.dwarf_image, (120, 150))
         data = {
             'dwarf_image': self.dwarf_image, # Задание нового размера персонажа
             'dwarf_x': self.dwarf_x, # Положение слева

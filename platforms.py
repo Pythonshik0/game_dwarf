@@ -28,6 +28,7 @@ def platforms(screen_width, screen_height):
         ]
     ]
 
+
 def bounding_box_ghost(screen_width, screen_height):
     return [
         # Платформы для первой локации
@@ -48,8 +49,8 @@ def bounding_box_ghost(screen_width, screen_height):
 def ladders(screen_width, screen_height):
     return [
         [ # 0 - первая лока
-            pygame.Rect(int(screen_width * 0.93), int(screen_height * 0.63), 100, int(screen_width * 0.15)),
-            pygame.Rect(int(screen_width * 0), int(screen_height * 0.29), 100, int(screen_width * 0.15)),
+            pygame.Rect(int(screen_width * 0.95), int(screen_height * 0.63), 80, int(screen_width * 0.15)),
+            pygame.Rect(int(screen_width * 0), int(screen_height * 0.29), 80, int(screen_width * 0.15)),
         ],
         [
 
