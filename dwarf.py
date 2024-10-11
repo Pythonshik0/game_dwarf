@@ -1,25 +1,37 @@
 import pygame
 import os
+import time
 
 
 class Dwarf:
     def __init__(self, screen_height, platforms):
         self.dwarf_image = None
+        self.ghost_bullets = None # Пульки призрака
 
         # Начальная позиция персонажа
         self.dwarf_x = 70 # Положение слева
         self.dwarf_y = screen_height # Вычисляем высоту пола
         self.dwarf_speed = 0.6  # Скорость перемещения персонажа
         self.dwarf_is_jumping = False
-        self.dwarf_jump_speed = 12  # Начальная скорость прыжка
+        self.dwarf_jump_speed = 15  # Начальная скорость прыжка
         self.dwarf_bullets = [] # Список для хранения пуль
-
+        self.vertical_velocity = 0  # Вертикальная скорость
+        self.last_jump_time = 0  # Время последнего прыжка
         self.dwarf_bullet_speed = 1 # Скорость пуль
+        self.gravity = 0.9  # Сила гравитации (ускорение падения)
+        self.max_fall_speed = 0.9  # Максимальная скорость падения
+        self.timer_shot = 0  # Таймер выстрела
+
+        # Загрузка изображения пули
+        self.bullet_image = pygame.image.load('media/image_main/Сфера-1-lvl.png')
+        self.bullet_image = pygame.transform.scale(self.bullet_image, (30, 30))  # Масштабируем изображение пули
+
 
         self.dwarf_can_shoot = True # Флаг для проверки, можно ли стрелять
-        self.dwarf_space = True # Проверка на пыжок
-
+        self.dwarf_space = True # Проверка на прыжок
         self.platforms = platforms # Платформы
+
+
         # Загрузка частей персонажа
         self.leg_image = pygame.image.load("media/image_main/нога.png").convert_alpha()
         self.head_image = pygame.image.load("media/image_main/голова.png").convert_alpha()
@@ -69,6 +81,7 @@ class Dwarf:
         self.dwarf_image.blit(self.arm_image, (arm_x_left, arm_y))  # Левая рука
         self.dwarf_image.blit(self.right_arm_flipped, (arm_x_right, arm_y))  # Правая рука
 
+        self.jump_delay = 0.8  # Задержка между прыжками в секундах
 
     def dwarf_characteristics(self):
         # Загрузка спрайта персонажа
@@ -82,7 +95,7 @@ class Dwarf:
             'dwarf_y': self.dwarf_y, # Положение над полом
             'character_speed': self.dwarf_speed, # Скорость перемещения персонажа
             'dwarf_is_jumping': self.dwarf_is_jumping, # Проверка на нажатый пробел
-            'jump_speed': self.dwarf_jump_speed, # Начальная высота прыжка
+            'dwarf_jump_speed': self.dwarf_jump_speed, # Начальная высота прыжка
             'dwarf_bullets': self.dwarf_bullets, # Список для хранения пуль
             'dwarf_bullet_speed': self.dwarf_bullet_speed, # Скорость пуль
             'dwarf_can_shoot': self.dwarf_can_shoot,
@@ -91,76 +104,67 @@ class Dwarf:
         return data
 
     def moving_the_dwarf_LEFT(self, keys, dwarf_x):
+        """Перемещаем гнома влево и задаем направление стрельбы"""
         if keys[pygame.K_LEFT]:
             self.dwarf_x = dwarf_x
             self.dwarf_x -= self.dwarf_speed
-
-            # Перемещаем гнома влево и задаем направление стрельбы
-            return self.dwarf_x
-
-        return dwarf_x
+        return
 
 
     def moving_the_dwarf_RIGHT(self, keys, dwarf_x):
+        """Перемещаем гнома вправо и задаем направление стрельбы"""
         if keys[pygame.K_RIGHT]:
             self.dwarf_x = dwarf_x
             self.dwarf_x += self.dwarf_speed
+        return
 
-            # Перемещаем гнома вправо и задаем направление стрельбы
-            return self.dwarf_x
-
-        return dwarf_x
-
-    def dwarf_is_jumping_K_UP(self, dwarf_is_jumping, keys, vertical_velocity, current_time, jump_delay, jump_speed, last_jump_time):
+    def dwarf_is_jumping_K_UP(self, keys):
         # Проверка на прыжок: можно прыгать только после задержки
-        if keys[pygame.K_UP] and not dwarf_is_jumping and (current_time - last_jump_time > jump_delay):
+        current_time = time.time()
+        if keys[pygame.K_UP] and not self.dwarf_is_jumping and (current_time - self.last_jump_time > self.jump_delay):
             self.dwarf_is_jumping = True  # Устанавливаем флаг прыжка
-            vertical_velocity -= jump_speed  # Начальная вертикальная скорость при прыжке
+            self.vertical_velocity -= self.dwarf_jump_speed  # Начальная вертикальная скорость при прыжке
             self.dwarf_space = True  # Флаг пространства для прыжка
-            last_jump_time = current_time  # Обновляем время последнего прыжка
+            self.last_jump_time = current_time  # Обновляем время последнего прыжка
+        return
 
-            return self.dwarf_is_jumping, vertical_velocity, self.dwarf_space, last_jump_time
-
-        return dwarf_is_jumping, vertical_velocity, self.dwarf_space, last_jump_time
-
-    def dwarf_apply_gravity(self, data):
+    def dwarf_apply_gravity(self, floor_y, current_location, platforms):
         # Применение гравитации и обновление положения персонажа
-        if data['dwarf_is_jumping']:
-            data['dwarf_y'] += data['vertical_velocity']  # Обновляем положение по Y с учётом скорости
-            data['vertical_velocity'] += data['gravity']  # Применяем гравитацию (ускорение)
+        if self.dwarf_is_jumping:
+            self.dwarf_y += self.vertical_velocity # Обновляем положение по Y с учётом скорости
+            self.vertical_velocity += self.gravity  # Применяем гравитацию (ускорение)
 
             # Ограничиваем скорость падения
-            if data['vertical_velocity'] > data['max_fall_speed']:
-                data['vertical_velocity'] = data['max_fall_speed']
+            if self.vertical_velocity > self.max_fall_speed:
+                self.vertical_velocity = self.max_fall_speed
 
         # Проверяем коллизии с платформами и полом
         if self.dwarf_image:
-            character_rect = pygame.Rect(data['dwarf_x'], data['dwarf_y'], self.dwarf_image.get_width(), self.dwarf_image.get_height())
+            character_rect = pygame.Rect(self.dwarf_x, self.dwarf_y, self.dwarf_image.get_width(), self.dwarf_image.get_height())
 
             # Проверяем столкновение с платформами
-            for platform in self.platforms[data['current_location']]:
+            for platform in platforms[current_location]:
                 if (character_rect.colliderect(platform)) and \
-                   (data['vertical_velocity'] >= 0) and \
+                   (self.vertical_velocity >= 0) and \
                    (character_rect.bottom <= platform.top + 10) and \
                    (platform.bottom > character_rect.bottom) and \
                    (character_rect.bottom > platform.top): # Проверка, что персонаж сверху платформы
 
-                    data['dwarf_y'] = platform.top - self.dwarf_image.get_height()  # Корректируем положение на платформе
-                    data['dwarf_is_jumping'] = False  # Завершаем прыжок
-                    data['vertical_velocity'] = 0  # Останавливаем вертикальную скорость
+                    self.dwarf_y = platform.top - self.dwarf_image.get_height()  # Корректируем положение на платформе
+                    self.dwarf_is_jumping = False  # Завершаем прыжок
+                    self.vertical_velocity = 0  # Останавливаем вертикальную скорость
                     break
             else:
-                if data['dwarf_y'] < data['floor_y'] - self.dwarf_image.get_height():
-                    data['dwarf_is_jumping'] = True  # Продолжаем прыжок, если ещё не на земле
+                if self.dwarf_y < floor_y - self.dwarf_image.get_height():
+                    self.dwarf_is_jumping = True  # Продолжаем прыжок, если ещё не на земле
                 else:
-                    data['dwarf_y'] = data['floor_y'] - self.dwarf_image.get_height()  # Останавливаем на земле
-                    data['dwarf_is_jumping'] = False  # Завершаем прыжок
-                    data['vertical_velocity'] = 0  # Обнуляем скорость
-                    data['dwarf_space'] = False  # Персонаж на земле
+                    self.dwarf_y = floor_y - self.dwarf_image.get_height()  # Останавливаем на земле
+                    self.dwarf_is_jumping = False  # Завершаем прыжок
+                    self.vertical_velocity = 0  # Обнуляем скорость
+                    self.dwarf_space = False  # Персонаж на земле
+        return
 
-        return data['dwarf_space'], data['vertical_velocity'], data['dwarf_is_jumping'], data['dwarf_y'], data['dwarf_x']
-
-    def dwarf_check_boundaries(self, size, current_location, dwarf_x, dwarf_bullets, evil_dwarf_bullets):
+    def dwarf_check_boundaries(self, size, current_location):
         # Проверка выхода за границы экрана
         # if self.dwarf_image:
         #     if dwarf_x >= size[0] - self.dwarf_image.get_width() and current_location == 0:
@@ -174,29 +178,94 @@ class Dwarf:
         #         dwarf_x = size[0] - 50  # Персонаж в конец экрана
 
         # Ограничиваем движение персонажа в пределах экрана
-        dwarf_x = max(0, min(dwarf_x, size[0] - self.dwarf_image.get_width()))
+        self.dwarf_x = max(0, min(self.dwarf_x, size[0] - self.dwarf_image.get_width()))
 
-        return dwarf_x, current_location, dwarf_bullets, evil_dwarf_bullets
+        return self.dwarf_x, current_location
 
-    def move_ladders(self, data):
-        for ladder in data['ladders'][data['current_location']]:
-            if data['character_rect'].colliderect(ladder):
-                data['vertical_velocity'] = 0 # Останавливаем вертикальное движение
-                if data['keys'][pygame.K_DOWN]: # Спуск вниз
-                    data['dwarf_y'] += 1
-                elif data['keys'][pygame.K_UP]: # Подъем вверх
-                    data['dwarf_y'] -= 1
+    def move_ladders(self, ladders, keys, current_location):
+        rect = pygame.Rect(self.dwarf_x, self.dwarf_y, self.dwarf_image.get_width(), self.dwarf_image.get_height())
+        for ladder in ladders[current_location]:
+            if rect.colliderect(ladder):
+                self.vertical_velocity = 0 # Останавливаем вертикальное движение
+                if keys[pygame.K_DOWN]: # Спуск вниз
+                    self.dwarf_y += 1
+                elif keys[pygame.K_UP]: # Подъем вверх
+                    self.dwarf_y -= 1
+        return
 
-        return data['vertical_velocity'], data['dwarf_y']
+    def collision_platform(self, current_location, platforms):
+        dwarf_bullet_rects = [bullet for bullet, _ in self.dwarf_bullets]
 
-    def collision_platform(self, data):
-        dwarf_bullet_rects = [bullet for bullet, _ in data['dwarf_bullets']]
-
-        for platform in self.platforms[data['current_location']]:
+        for platform in platforms[current_location]:
             collided_indices = platform.collidelistall(dwarf_bullet_rects)
             if collided_indices:
                 for index in collided_indices:  # Удаляем все столкнувшиеся пули
-                    del data['dwarf_bullets'][index]
+                    del self.dwarf_bullets[index]
 
-        return data['dwarf_bullets']
+    def shoot(self, keys, ghost_image, ghost_bullets): # СТРЕЛЬБА ГЛ. ГЕРОЯ
+        """Стрельба с учетом времени задержки между выстрелами"""
+        current_time = time.time()
+        self.ghost_bullets = ghost_bullets
+        # Если прошла задержка, то стреляем
+        if current_time - self.timer_shot >= 0.2:
+            if keys[pygame.K_w] and keys[pygame.K_a]:
+                self._shoot('w-a')
+            elif keys[pygame.K_w] and keys[pygame.K_d]:
+                self._shoot('w-d')
+            elif keys[pygame.K_s] and keys[pygame.K_a]:
+                self._shoot('s-a')
+            elif keys[pygame.K_s] and keys[pygame.K_d]:
+                self._shoot('s-d')
+            elif keys[pygame.K_w]:
+                self._shoot('w')
+            elif keys[pygame.K_s]:
+                self._shoot('s')
+            elif keys[pygame.K_a]:
+                self._shoot('a')
+            elif keys[pygame.K_d]:
+                self._shoot('d')
 
+            self.timer_shot = current_time  # Обновляем таймер после выстрела
+
+        # Стрельба в перса (если существует злой гном)
+        if ghost_image:
+            self._check_for_dwarf_collision()
+
+    def _shoot(self, direction): # СТРЕЛЬБА ГЛ. ГЕРОЯ
+        """Создание пули и добавление ее в список"""
+        bullet_rect = pygame.Rect(self.dwarf_x + self.dwarf_image.get_width() // 2,
+                                  self.dwarf_y + self.dwarf_image.get_height() // 2,
+                                  self.bullet_image.get_width(),
+                                  self.bullet_image.get_height())  # Создаем прямоугольник для пули
+        self.dwarf_bullets.append((bullet_rect, direction))
+
+    def _check_for_dwarf_collision(self): # СТРЕЛЬБА В ГЛ. ГЕРОЯ
+        """Проверка на столкновение с выстрелом ЗЛОДЕЕВ"""
+        if self.dwarf_image:
+            dwarf = pygame.Rect(self.dwarf_x, self.dwarf_y, self.dwarf_image.get_width(), self.dwarf_image.get_height())
+
+            for bullet, _, _ in self.ghost_bullets:
+                if dwarf.colliderect(bullet):
+                    # self.dwarf_image = None  # Убираем гнома
+                    break  # Прерываем цикл после попадания
+
+    def update_bullets(self, size): # СТРЕЛЬБА ГЛ. ГЕРОЯ
+        """Обновление положения пуль и удаление пуль, которые вышли за экран"""
+        directions = {
+            'w-d': (1, -1),
+            'w-a': (-1, -1),
+            's-d': (1, 1),
+            's-a': (-1, 1),
+            'w': (0, -1),
+            's': (0, 1),
+            'a': (-1, 0),
+            'd': (1, 0)
+        }
+        # Обновление пуль
+        for bullet, keyboard in self.dwarf_bullets:
+            dx, dy = directions.get(keyboard, (0, 0))
+            bullet.x += self.dwarf_bullet_speed * dx
+            bullet.y += self.dwarf_bullet_speed * dy
+
+        # Удаляем пули, которые вышли за экран
+        self.dwarf_bullets = [(bullet, keyboard) for bullet, keyboard in self.dwarf_bullets if 0 < bullet.x < size[0] and 0 < bullet.y < size[1]]
