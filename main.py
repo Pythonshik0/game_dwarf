@@ -20,15 +20,8 @@ class GameDwarf:
         self.runGame = True
 
         # Параметры персонажа
-        self.dwarf_x = None # Положение по оси X
-        self.dwarf_y = None # Положение по оси Y
-        self.dwarf_is_jumping = None  # Флаг прыжка
-        self.dwarf_space = None  # Проверка на прыжок
-        self.dwarf_image = dwarf.dwarf_characteristics()['dwarf_image'] # Изображение персонажа
+        self.dwarf_image = dwarf.dwarf_image # Изображение персонажа
         self.bullet_image = dwarf.bullet_image
-        self.dwarf_bullets = None # Список пуль
-        self.dwarf_can_shoot = None # Флаг возможности стрельбы
-        self.dwarf_bullet_speed = None # Скорость пули
 
         # Стрельбы перса
         self.dwarf_can_shoot_DUBLE = True
@@ -69,24 +62,22 @@ class GameDwarf:
 
     def dwarf(self, keys, floor_y, size):
         """Управление движениями/стрельбой/прыжками и тд. персонажа (гл. героя)"""
+        ghost_rect = pygame.Rect(self.ghost_x, self.ghost_y, self.ghost_image.get_width(), self.ghost_image.get_height()) # Создаем прямоугольник для призрака
         if self.dwarf_image:
-            self.dwarf_x = dwarf.dwarf_x
-            self.dwarf_y = dwarf.dwarf_y
-            self.dwarf_bullets = dwarf.dwarf_bullets
-            self.dwarf_bullet_speed = dwarf.dwarf_bullet_speed
-
-            dwarf_rect = pygame.Rect(self.dwarf_x, self.dwarf_y, self.dwarf_image.get_width(), self.dwarf_image.get_height())
-
             dwarf.move_ladders(ladders, keys, self.current_location) # Движение по лестнице
-            dwarf.moving_the_dwarf_LEFT(keys, self.dwarf_x) # Движение влево
-            dwarf.moving_the_dwarf_RIGHT(keys, self.dwarf_x) # Движение вправо
+            dwarf.moving_the_dwarf_LEFT(keys) # Движение влево
+            dwarf.moving_the_dwarf_RIGHT(keys) # Движение вправо
             dwarf.dwarf_is_jumping_K_UP(keys)  # Прыжок dwarf
             dwarf.dwarf_apply_gravity(floor_y, self.current_location, platforms) # Гравитация и движение персонажа на карте
             dwarf.dwarf_check_boundaries(size, self.current_location) # Выхода за границы экрана и смена уровня
-            dwarf.collision_platform(self.current_location, platforms) # Удаление пулек при попадании в платформу
+            dwarf.collision_platform(self.current_location, platforms, ghost_rect) # Удаление пулек при попадании в платформу
             dwarf.shoot(keys, self.ghost_image, self.ghost_bullets) # Стрельба с учетом времени задержки между выстрелами
             dwarf.update_bullets(size) # Обновление положения пуль и удаление пуль, которые вышли за экран
 
+            """ПЕРЕНЕСТИ В ГЛ КЛАСС ПОСЛЕ СОЗДАНИЯ ФУНКЦИИ"""
+            dwarf_x = dwarf.dwarf_x
+            dwarf_y = dwarf.dwarf_y
+            dwarf_rect = pygame.Rect(dwarf_x, dwarf_y, self.dwarf_image.get_width(), self.dwarf_image.get_height())
             if dwarf_rect.colliderect(self.door): # ПЕРЕХОД НА СЛЕДУЮЩИЙ УРОВЕНЬ (ДВЕРЬ)
                 pass
 
@@ -134,12 +125,13 @@ class GameDwarf:
 
         # ____________ВЕДЕМ ОГОНЬ ПО ГЛ ГЕРОЮ__________________________________
         # Проверяем расстояние до главного героя
-        distance_x = self.dwarf_x - self.ghost_x
-        distance_y = self.dwarf_y - self.ghost_y
+        dwarf_x, dwarf_y = dwarf.dwarf_x, dwarf.dwarf_y
+
+        distance_x = dwarf_x - self.ghost_x
+        distance_y = dwarf_y - self.ghost_y
 
         shot_timer = time.time()  # Текущее время в секундах
 
-        # Условие для стрельбы (если герой близко и прошло достаточно времени с последнего выстрела)
         if self.current_location == 0 and self.ghost_image and abs(distance_x) < 1000 and abs(distance_y) < 100 and (
                 shot_timer - self.timer_shot_ghost > 0.5):
             # Создаем пулю на уровне призрака
@@ -164,6 +156,14 @@ class GameDwarf:
             self.ghost_bullets.append((EVIL_bullet_rect, direction_x, direction_y))
             self.timer_shot_ghost = shot_timer
 
+        # СТРЕЛЬБА В ГЛ ГЕРОЯ
+        dwarf_rect = dwarf.dwarf_rect()
+        ghost_bullet_rects = [bullet for bullet, _, _ in self.ghost_bullets]
+        collided_indices_ghost = dwarf_rect.collidelistall(ghost_bullet_rects)
+        if collided_indices_ghost:
+            for index in collided_indices_ghost:  # Удаляем все столкнувшиеся пули
+                del self.ghost_bullets[index]
+
         # Обновление положения пуль злого призрака
         if self.current_location == 0:
             updated_bullets = []
@@ -183,31 +183,6 @@ class GameDwarf:
         else:
             self.ghost_bullets = []
 
-        # ________________Стрельба в ghost______________________________
-        if self.ghost_image:
-            self.dwarf_bullets = dwarf.dwarf_bullets
-            ghost_rect = pygame.Rect(self.ghost_x, self.ghost_y, self.ghost_image.get_width(), self.ghost_image.get_height())
-
-            ghost_bullet_rects = [bullet for bullet, _ in self.dwarf_bullets] # Если злой гном существует, проверяем столкновения
-            collided_indices = ghost_rect.collidelistall(ghost_bullet_rects)
-
-            if collided_indices:
-                # self.ghost_image = None  # Убираем злого гнома
-                for index in collided_indices: # Удаляем все столкнувшиеся пули
-                    del self.dwarf_bullets[index]
-
-
-        # for bullet, _ in self.dwarf_bullets:
-        #     if check_evil_dwarf_rect:
-        #         if evil_dwarf_rect.colliderect(bullet):
-        #             self.evil_dwarf_image = None  # Убираем злого гнома
-        #             self.dwarf_bullets.remove((bullet, _))  # Удаляем пулю из списка
-        #             break  # Прерываем цикл после попадания
-
-
-        # # ________________СТРЕЛЬБА В ЗЛОГО ГНОМА______________________________
-        # """Функция перемещения гнома"""
-        # self.evil_dwarf_x = evil_dwarf.actions_evil_dwarf(evil_dwarf, size) # Перемещение
 
 
     def draw(self, screen):
@@ -233,25 +208,24 @@ class GameDwarf:
         #     screen.blit(black_square, (bounding.x, bounding.y)) # Отображаем платформы
 
         # Отображаем лестницу на 0 уровне
-        for ladder in ladders[self.current_location]:
-            black_square = pygame.Surface((ladder.width, ladder.height))
-
-            # Задаем цвет поверхности (черный)
-            black_square.fill((0, 0, 0))  # RGB (0, 0, 0) – черный цвет
-            screen.blit(black_square, (ladder.x, ladder.y)) # Отображаем платформы
+        # for ladder in ladders[self.current_location]:
+        #     black_square = pygame.Surface((ladder.width, ladder.height))
+        #
+        #     # Задаем цвет поверхности (черный)
+        #     black_square.fill((0, 0, 0))  # RGB (0, 0, 0) – черный цвет
+        #     screen.blit(black_square, (ladder.x, ladder.y)) # Отображаем платформы
 
         # Отображение персонажа
-        # if self.dwarf_image:
-        #     screen.blit(self.dwarf_image, [self.dwarf_x, self.dwarf_y])
-        screen.blit(self.dwarf_image, (self.dwarf_x, self.dwarf_y))
+        dwarf.dwarf_screen(screen)
+
         """ОТОБРАЖЕНИЕ GHOST"""
         # Если злой гном существует, рисуем его
         if self.ghost_image and self.current_location == 0:
             screen.blit(self.ghost_image, (self.ghost_x, self.ghost_y))
 
         # Отображение пуль
-        self.dwarf_bullets = dwarf.dwarf_bullets
-        for bullet, _ in self.dwarf_bullets:
+        dwarf_bullets = dwarf.dwarf_bullets
+        for bullet, _ in dwarf_bullets:
             screen.blit(self.bullet_image, (bullet.x, bullet.y))  # Отображаем пули
 
         for bullet, _, _ in self.ghost_bullets:
@@ -279,8 +253,6 @@ class GameDwarf:
             keys = pygame.key.get_pressed()
             self.dwarf(keys, floor_y, size) # Функция работы гл героя
             self.ghost() # Призрак
-            # self.shoot(keys)
-            # self.update_bullets(size)
             self.draw(screen)
 
         pygame.quit()

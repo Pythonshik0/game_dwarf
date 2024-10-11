@@ -21,11 +21,11 @@ class Dwarf:
         self.gravity = 0.9  # Сила гравитации (ускорение падения)
         self.max_fall_speed = 0.9  # Максимальная скорость падения
         self.timer_shot = 0  # Таймер выстрела
+        self.jump_delay = 0.8  # Задержка между прыжками в секундах
 
         # Загрузка изображения пули
         self.bullet_image = pygame.image.load('media/image_main/Сфера-1-lvl.png')
         self.bullet_image = pygame.transform.scale(self.bullet_image, (30, 30))  # Масштабируем изображение пули
-
 
         self.dwarf_can_shoot = True # Флаг для проверки, можно ли стрелять
         self.dwarf_space = True # Проверка на прыжок
@@ -80,43 +80,28 @@ class Dwarf:
         # Отрисовка двух рук: левой и правой
         self.dwarf_image.blit(self.arm_image, (arm_x_left, arm_y))  # Левая рука
         self.dwarf_image.blit(self.right_arm_flipped, (arm_x_right, arm_y))  # Правая рука
-
-        self.jump_delay = 0.8  # Задержка между прыжками в секундах
-
-    def dwarf_characteristics(self):
-        # Загрузка спрайта персонажа
-        # dwarf = pygame.image.load("media/image_main/dworf.png").convert_alpha()
-
-        # Задание нового размера персонажа (например, 100x100 пикселей)
         self.dwarf_image = pygame.transform.scale(self.dwarf_image, (120, 150))
-        data = {
-            'dwarf_image': self.dwarf_image, # Задание нового размера персонажа
-            'dwarf_x': self.dwarf_x, # Положение слева
-            'dwarf_y': self.dwarf_y, # Положение над полом
-            'character_speed': self.dwarf_speed, # Скорость перемещения персонажа
-            'dwarf_is_jumping': self.dwarf_is_jumping, # Проверка на нажатый пробел
-            'dwarf_jump_speed': self.dwarf_jump_speed, # Начальная высота прыжка
-            'dwarf_bullets': self.dwarf_bullets, # Список для хранения пуль
-            'dwarf_bullet_speed': self.dwarf_bullet_speed, # Скорость пуль
-            'dwarf_can_shoot': self.dwarf_can_shoot,
-            'dwarf_space': self.dwarf_space,
-        }
-        return data
 
-    def moving_the_dwarf_LEFT(self, keys, dwarf_x):
+
+
+    def dwarf_screen(self, screen):
+        """Вывод персонажа на экран"""
+        screen.blit(self.dwarf_image, (self.dwarf_x, self.dwarf_y))
+
+    def dwarf_rect(self):
+        """rect dwarf"""
+        dwarf_rect = pygame.Rect(self.dwarf_x, self.dwarf_y, self.dwarf_image.get_width(), self.dwarf_image.get_height())
+        return dwarf_rect
+
+    def moving_the_dwarf_LEFT(self, keys):
         """Перемещаем гнома влево и задаем направление стрельбы"""
         if keys[pygame.K_LEFT]:
-            self.dwarf_x = dwarf_x
             self.dwarf_x -= self.dwarf_speed
-        return
 
-
-    def moving_the_dwarf_RIGHT(self, keys, dwarf_x):
+    def moving_the_dwarf_RIGHT(self, keys):
         """Перемещаем гнома вправо и задаем направление стрельбы"""
         if keys[pygame.K_RIGHT]:
-            self.dwarf_x = dwarf_x
             self.dwarf_x += self.dwarf_speed
-        return
 
     def dwarf_is_jumping_K_UP(self, keys):
         # Проверка на прыжок: можно прыгать только после задержки
@@ -193,7 +178,7 @@ class Dwarf:
                     self.dwarf_y -= 1
         return
 
-    def collision_platform(self, current_location, platforms):
+    def collision_platform(self, current_location, platforms, ghost_rect):
         dwarf_bullet_rects = [bullet for bullet, _ in self.dwarf_bullets]
 
         for platform in platforms[current_location]:
@@ -201,6 +186,12 @@ class Dwarf:
             if collided_indices:
                 for index in collided_indices:  # Удаляем все столкнувшиеся пули
                     del self.dwarf_bullets[index]
+
+        # ________________Стрельба в GHOST главным героем______________________________
+        collided_indices_ghost = ghost_rect.collidelistall(dwarf_bullet_rects)
+        if collided_indices_ghost:
+            for index in collided_indices_ghost:  # Удаляем все столкнувшиеся пули
+                del self.dwarf_bullets[index]
 
     def shoot(self, keys, ghost_image, ghost_bullets): # СТРЕЛЬБА ГЛ. ГЕРОЯ
         """Стрельба с учетом времени задержки между выстрелами"""
