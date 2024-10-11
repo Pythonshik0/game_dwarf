@@ -3,6 +3,7 @@ import os
 from PIL import Image
 import time
 import random
+import math
 
 from ghost import *
 from dwarf import Dwarf
@@ -51,6 +52,7 @@ class GameDwarf:
         self.current_location = 0  # Текущая локация
         self.last_jump_time = 0  # Время последнего прыжка
         self.timer_shot = 0  # Таймер выстрела
+        self.timer_shot_ghost = 0.5
         self.ghost_speed = 0.5
 
 
@@ -156,9 +158,9 @@ class GameDwarf:
             dwarf = pygame.Rect(self.dwarf_x, self.dwarf_y, self.dwarf_image.get_width(), self.dwarf_image.get_height())
             dwarf_rect = True
 
-        for bullet, _ in self.ghost_bullets:
+        for bullet, _, _ in self.ghost_bullets:
             if dwarf_rect and dwarf.colliderect(bullet):
-                self.dwarf_image = None  # Убираем гнома
+                # self.dwarf_image = None  # Убираем гнома
                 break  # Прерываем цикл после попадания
 
     def update_bullets(self, size): # СТРЕЛЬБА ГЛ. ГЕРОЯ
@@ -184,13 +186,13 @@ class GameDwarf:
 
 
     def ghost(self):
+        """Функция движений / стрельюы и тд. (Призрака)"""
         current_time = time.time() # Получаем текущее время
         ghost_rect = pygame.Rect(self.ghost_x, self.ghost_y, self.ghost_image.get_width(), self.ghost_image.get_height()) # Создаем прямоугольник для призрака
 
         # Если прошло меньше 6 секунд, перемещаем призрака в первой bounding box
         if current_time - self.time_ghost_location < 6:
             bounding_box = bounding_box_ghost[self.current_location][0]
-
             if ghost_rect.top > bounding_box.top and self.check is True:
                 self.ghost_y -= 1
             else:
@@ -199,7 +201,6 @@ class GameDwarf:
         # Если прошло от 6 до 12 секунд, перемещаем призрака во второй bounding box
         elif 6 <= current_time - self.time_ghost_location < 12:
             bounding_box = bounding_box_ghost[self.current_location][1]
-
             if ghost_rect.bottom < bounding_box.bottom and self.check is False:
                 self.ghost_y += 1
             else:
@@ -226,34 +227,57 @@ class GameDwarf:
         elif self.direction == 'right' and self.ghost_x < bounding_box.right - self.ghost_image.get_width():
             self.ghost_x += self.ghost_speed
 
+        # ____________ВЕДЕМ ОГОНЬ ПО ГЛ ГЕРОЮ__________________________________
+        # Проверяем расстояние до главного героя
+        distance_x = self.dwarf_x - self.ghost_x
+        distance_y = self.dwarf_y - self.ghost_y
 
-        # # ____________ВЕДЕМ ОГОНЬ ПО ГЛ ГЕРОЮ__________________________________
-        # # Проверяем расстояние до главного героя
-        # distance_x = self.dwarf_x - self.evil_dwarf_x
-        # shot_timer = time.time()  # Текущее время в секундах
-        # if self.current_location == 0 and self.evil_dwarf_image and abs(distance_x) < 400 and (shot_timer - self.evil_dwarf_timer_shot > shot_delay):  # Если герой близко, создаем пулю
-        #     # Создаем пулю на уровне злого гнома
-        #     EVIL_bullet_rect = pygame.Rect(self.evil_dwarf_x + self.evil_dwarf_image.get_width() // 2,
-        #                                    self.evil_dwarf_y + self.evil_dwarf_image.get_height() // 2,
-        #                                    self.bullet_image.get_width(),
-        #                                    self.bullet_image.get_height())  # Создаем прямоугольник для пули
-        #
-        #     # Определяем направление стрельбы
-        #     direction = 1 if distance_x > 0 else -1  # Если герой слева, стреляем влево, иначе вправо
-        #     self.evil_dwarf_bullets.append((EVIL_bullet_rect, direction))  # Добавляем пулю в список
-        #     self.evil_dwarf_timer_shot = shot_timer
-        #
-        # # Обновление положения пуль злого гнома
-        # if self.current_location == 0:
-        #     for bullet, direction in self.evil_dwarf_bullets:
-        #         bullet.x += 1 * direction  # Двигаем пулю в направлении
-        #
-        #     # Удаляем пули, которые вышли за экран
-        #     self.evil_dwarf_bullets = [(bullet, direction) for bullet, direction in self.evil_dwarf_bullets if 0 < bullet.x < size[0]]
-        # else:
-        #     self.evil_dwarf_bullets = []
-        #
-        #
+        shot_timer = time.time()  # Текущее время в секундах
+
+        # Условие для стрельбы (если герой близко и прошло достаточно времени с последнего выстрела)
+        if self.current_location == 0 and self.ghost_image and abs(distance_x) < 1000 and abs(distance_y) < 100 and (
+                shot_timer - self.timer_shot_ghost > 0.5):
+            # Создаем пулю на уровне призрака
+            distance = math.sqrt(distance_x ** 2 + distance_y ** 2)
+            """
+            Формула с возведением в квадрат необходима для расчета евклидова расстояния между двумя точками на плоскости. 
+            Это стандартная формула для вычисления расстояния между точками в пространстве с двумя координатами (x и y):
+            distance = кв. корень (x2 - x1)**2 + (y2 - y1)**2
+            (x2 - x1) - это self.dwarf_x - self.ghost_x
+            (y2 - y1) - это self.dwarf_y - self.ghost_y
+            """
+            EVIL_bullet_rect = pygame.Rect(self.ghost_x + self.ghost_image.get_width() // 2,
+                                           self.ghost_y + self.ghost_image.get_height() // 2,
+                                           self.bullet_image.get_width(),
+                                           self.bullet_image.get_height())  # Прямоугольник для пули
+
+            # Вычисляем направления полета пули
+            direction_x = distance_x / distance # Как пример получается 0.7 (по оси x перемешаем на 0.7)
+            direction_y = distance_y / distance # Как пример получается 0.9 (по оси x перемешаем на 0.9)
+
+            # Добавляем пулю в список с её скоростью и направлением
+            self.ghost_bullets.append((EVIL_bullet_rect, direction_x, direction_y))
+            self.timer_shot_ghost = shot_timer
+
+        # Обновление положения пуль злого призрака
+        if self.current_location == 0:
+            updated_bullets = []
+            for bullet, direction_x, direction_y in self.ghost_bullets:
+                bullet_speed = 1  # Скорость пули
+
+                # Обновляем координаты пули на основе её направления и скорости
+                bullet.x += direction_x * bullet_speed
+                bullet.y += direction_y * bullet_speed
+
+                # Удаляем пули, которые вышли за экран
+                if 0 < bullet.x < size[0] and 0 < bullet.y < size[1]:
+                    updated_bullets.append((bullet, direction_x, direction_y))
+
+            # Обновляем список пуль
+            self.ghost_bullets = updated_bullets
+        else:
+            self.ghost_bullets = []
+
         # ________________Стрельба в ghost______________________________
         if self.ghost_image:
             ghost_rect = pygame.Rect(self.ghost_x, self.ghost_y, self.ghost_image.get_width(), self.ghost_image.get_height())
@@ -262,7 +286,7 @@ class GameDwarf:
             collided_indices = ghost_rect.collidelistall(ghost_bullet_rects)
 
             if collided_indices:
-                self.ghost_image = None  # Убираем злого гнома
+                # self.ghost_image = None  # Убираем злого гнома
                 for index in collided_indices: # Удаляем все столкнувшиеся пули
                     del self.dwarf_bullets[index]
 
@@ -323,7 +347,7 @@ class GameDwarf:
         for bullet, _ in self.dwarf_bullets:
             screen.blit(self.bullet_image, (bullet.x, bullet.y))  # Отображаем пули
 
-        for bullet, _ in self.ghost_bullets:
+        for bullet, _, _ in self.ghost_bullets:
             screen.blit(self.bullet_image, (bullet.x, bullet.y))  # Отображаем пули
 
         # # Создаем полупрозрачный черный слой
