@@ -104,17 +104,17 @@ class Dwarf:
             self.dwarf_x += self.dwarf_speed
 
     def dwarf_is_jumping_K_UP(self, keys):
-        # Проверка на прыжок: можно прыгать только после задержки
+        """Проверка на прыжок: можно прыгать только после задержки"""
         current_time = time.time()
         if keys[pygame.K_UP] and not self.dwarf_is_jumping and (current_time - self.last_jump_time > self.jump_delay):
             self.dwarf_is_jumping = True  # Устанавливаем флаг прыжка
             self.vertical_velocity -= self.dwarf_jump_speed  # Начальная вертикальная скорость при прыжке
             self.dwarf_space = True  # Флаг пространства для прыжка
             self.last_jump_time = current_time  # Обновляем время последнего прыжка
-        return
+
 
     def dwarf_apply_gravity(self, floor_y, current_location, platforms):
-        # Применение гравитации и обновление положения персонажа
+        """Применение гравитации и обновление положения персонажа"""
         if self.dwarf_is_jumping:
             self.dwarf_y += self.vertical_velocity # Обновляем положение по Y с учётом скорости
             self.vertical_velocity += self.gravity  # Применяем гравитацию (ускорение)
@@ -150,7 +150,7 @@ class Dwarf:
         return
 
     def dwarf_check_boundaries(self, size, current_location):
-        # Проверка выхода за границы экрана
+        """Проверка выхода за границы экрана и смена уровня"""
         # if self.dwarf_image:
         #     if dwarf_x >= size[0] - self.dwarf_image.get_width() and current_location == 0:
         #         current_location += 1  # Переход на следующую локацию
@@ -168,6 +168,7 @@ class Dwarf:
         return self.dwarf_x, current_location
 
     def move_ladders(self, ladders, keys, current_location):
+        """Движение по лестнице"""
         rect = pygame.Rect(self.dwarf_x, self.dwarf_y, self.dwarf_image.get_width(), self.dwarf_image.get_height())
         for ladder in ladders[current_location]:
             if rect.colliderect(ladder):
@@ -176,9 +177,9 @@ class Dwarf:
                     self.dwarf_y += 1
                 elif keys[pygame.K_UP]: # Подъем вверх
                     self.dwarf_y -= 1
-        return
 
     def collision_platform(self, current_location, platforms, ghost_rect):
+        """Удаление пулек при попадании в платформу или врагов"""
         dwarf_bullet_rects = [bullet for bullet, _ in self.dwarf_bullets]
 
         for platform in platforms[current_location]:
@@ -260,3 +261,9 @@ class Dwarf:
 
         # Удаляем пули, которые вышли за экран
         self.dwarf_bullets = [(bullet, keyboard) for bullet, keyboard in self.dwarf_bullets if 0 < bullet.x < size[0] and 0 < bullet.y < size[1]]
+
+    def door_next_level(self, door):
+        """Переход на след уровень (Дверь)"""
+        dwarf_rect = self.dwarf_rect()
+        if dwarf_rect.colliderect(door):  # ПЕРЕХОД НА СЛЕДУЮЩИЙ УРОВЕНЬ (ДВЕРЬ)
+            pass

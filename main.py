@@ -7,6 +7,7 @@ import math
 
 from ghost import *
 from dwarf import Dwarf
+from utils import screen_ghost_shot
 from platforms import platforms, background_images, ladders, StaticObject, bounding_box_ghost
 
 
@@ -19,30 +20,10 @@ class GameDwarf:
         # Инициализация игры
         self.runGame = True
 
-        # Параметры персонажа
         self.dwarf_image = dwarf.dwarf_image # Изображение персонажа
-        self.bullet_image = dwarf.bullet_image
-
-        # Стрельбы перса
-        self.dwarf_can_shoot_DUBLE = True
-
-        # Злодеи 0 lvl
-        self.ghost_bullets = [] # Выстрелы злодея
-        self.ghost_image = ghost.ghost_characteristics()['ghost_image']  # Изображение персонажа
-        self.ghost_x = ghost.ghost_characteristics()['ghost_x']
-        self.ghost_y = ghost.ghost_characteristics()['ghost_y']
-        self.direction = random.choice(['up', 'down', 'left', 'right'])  # Начальное направление
-        self.last_move_time = time.time() # Время последнего движения
-        self.time_ghost_location = time.time()
-        self.check = False
-        self.change_of_location = False # Смена чек бокса для ghost
-        self.time_movie_box = 0 # Чек бокс в котором перемещается ghost
 
         # Общие переменные
         self.current_location = 0  # Текущая локация
-        # self.timer_shot = 0  # Таймер выстрела
-        self.timer_shot_ghost = 0.5
-        self.ghost_speed = 0.5
 
         # Дверь на следующий уровень
         door_image = pygame.image.load('media/image_main/дверь-закрытая.png').convert_alpha()
@@ -61,129 +42,28 @@ class GameDwarf:
                 self.runGame = False  # Завершаем игру, если закрыли окно
 
     def dwarf(self, keys, floor_y, size):
-        """Управление движениями/стрельбой/прыжками и тд. персонажа (гл. героя)"""
-        ghost_rect = pygame.Rect(self.ghost_x, self.ghost_y, self.ghost_image.get_width(), self.ghost_image.get_height()) # Создаем прямоугольник для призрака
+        """Управление движениями/стрельбой/прыжками и тд. персонажа (ГЕРОЯ)"""
+        ghost_rect = ghost.rect_ghost()
+        ghost_bullets = ghost.ghost_bullets
+        ghost_image = ghost.ghost_image
+
         if self.dwarf_image:
             dwarf.move_ladders(ladders, keys, self.current_location) # Движение по лестнице
             dwarf.moving_the_dwarf_LEFT(keys) # Движение влево
             dwarf.moving_the_dwarf_RIGHT(keys) # Движение вправо
-            dwarf.dwarf_is_jumping_K_UP(keys)  # Прыжок dwarf
+            dwarf.dwarf_is_jumping_K_UP(keys) # Прыжок dwarf
             dwarf.dwarf_apply_gravity(floor_y, self.current_location, platforms) # Гравитация и движение персонажа на карте
-            dwarf.dwarf_check_boundaries(size, self.current_location) # Выхода за границы экрана и смена уровня
+            dwarf.dwarf_check_boundaries(size, self.current_location) # Проверка выхода за границы экрана и смена уровня
             dwarf.collision_platform(self.current_location, platforms, ghost_rect) # Удаление пулек при попадании в платформу
-            dwarf.shoot(keys, self.ghost_image, self.ghost_bullets) # Стрельба с учетом времени задержки между выстрелами
+            dwarf.shoot(keys, ghost_image, ghost_bullets) # Стрельба с учетом времени задержки между выстрелами
             dwarf.update_bullets(size) # Обновление положения пуль и удаление пуль, которые вышли за экран
-
-            """ПЕРЕНЕСТИ В ГЛ КЛАСС ПОСЛЕ СОЗДАНИЯ ФУНКЦИИ"""
-            dwarf_x = dwarf.dwarf_x
-            dwarf_y = dwarf.dwarf_y
-            dwarf_rect = pygame.Rect(dwarf_x, dwarf_y, self.dwarf_image.get_width(), self.dwarf_image.get_height())
-            if dwarf_rect.colliderect(self.door): # ПЕРЕХОД НА СЛЕДУЮЩИЙ УРОВЕНЬ (ДВЕРЬ)
-                pass
+            dwarf.door_next_level(self.door) # Переход на след уровень (Дверь)
 
     def ghost(self):
-        """Функция движений / стрельюы и тд. (Призрака)"""
-        current_time = time.time() # Получаем текущее время
-        ghost_rect = pygame.Rect(self.ghost_x, self.ghost_y, self.ghost_image.get_width(), self.ghost_image.get_height()) # Создаем прямоугольник для призрака
-
-        # Если прошло меньше 6 секунд, перемещаем призрака в первой bounding box
-        if current_time - self.time_ghost_location < 6:
-            bounding_box = bounding_box_ghost[self.current_location][0]
-            if ghost_rect.top > bounding_box.top and self.check is True:
-                self.ghost_y -= 1
-            else:
-                self.check = False  # Переключаем направление движения
-
-        # Если прошло от 6 до 12 секунд, перемещаем призрака во второй bounding box
-        elif 6 <= current_time - self.time_ghost_location < 12:
-            bounding_box = bounding_box_ghost[self.current_location][1]
-            if ghost_rect.bottom < bounding_box.bottom and self.check is False:
-                self.ghost_y += 1
-            else:
-                self.check = True  # Снова переключаем направление движения
-
-        # Если прошло больше 12 секунд, обновляем таймер и возвращаем в первую bounding box
-        elif current_time - self.time_ghost_location >= 12:
-            bounding_box = bounding_box_ghost[self.current_location][0]
-            self.time_ghost_location = current_time  # Сбрасываем таймер
-            self.check = True  # Готовим к движению в следующем цикле
-
-        # Если прошло достаточно времени, выбираем новое направление
-        if time.time() - self.last_move_time > 0.4:  # например, 0.5 секунды
-            self.direction = random.choice(['up', 'down', 'left', 'right'])
-            self.last_move_time = time.time()  # Обновляем время последнего выбора направления
-
-        # Перемещаем призрака в случайном направлении, если он не выходит за границы bounding box
-        if self.direction == 'up' and self.ghost_y > bounding_box.top:
-            self.ghost_y -= self.ghost_speed
-        elif self.direction == 'down' and self.ghost_y < bounding_box.bottom - self.ghost_image.get_height():
-            self.ghost_y += self.ghost_speed
-        elif self.direction == 'left' and self.ghost_x > bounding_box.left:
-            self.ghost_x -= self.ghost_speed
-        elif self.direction == 'right' and self.ghost_x < bounding_box.right - self.ghost_image.get_width():
-            self.ghost_x += self.ghost_speed
-
-        # ____________ВЕДЕМ ОГОНЬ ПО ГЛ ГЕРОЮ__________________________________
-        # Проверяем расстояние до главного героя
+        """Управление движениями / стрельбой / прыжками и тд. персонажа (ПРИЗРАКА)"""
+        ghost.move_ghost(self.current_location) # Функция движений призрака в зависимости от локации
         dwarf_x, dwarf_y = dwarf.dwarf_x, dwarf.dwarf_y
-
-        distance_x = dwarf_x - self.ghost_x
-        distance_y = dwarf_y - self.ghost_y
-
-        shot_timer = time.time()  # Текущее время в секундах
-
-        if self.current_location == 0 and self.ghost_image and abs(distance_x) < 1000 and abs(distance_y) < 100 and (
-                shot_timer - self.timer_shot_ghost > 0.5):
-            # Создаем пулю на уровне призрака
-            distance = math.sqrt(distance_x ** 2 + distance_y ** 2)
-            """
-            Формула с возведением в квадрат необходима для расчета евклидова расстояния между двумя точками на плоскости. 
-            Это стандартная формула для вычисления расстояния между точками в пространстве с двумя координатами (x и y):
-            distance = кв. корень (x2 - x1)**2 + (y2 - y1)**2
-            (x2 - x1) - это self.dwarf_x - self.ghost_x
-            (y2 - y1) - это self.dwarf_y - self.ghost_y
-            """
-            EVIL_bullet_rect = pygame.Rect(self.ghost_x + self.ghost_image.get_width() // 2,
-                                           self.ghost_y + self.ghost_image.get_height() // 2,
-                                           self.bullet_image.get_width(),
-                                           self.bullet_image.get_height())  # Прямоугольник для пули
-
-            # Вычисляем направления полета пули
-            direction_x = distance_x / distance # Как пример получается 0.7 (по оси x перемешаем на 0.7)
-            direction_y = distance_y / distance # Как пример получается 0.9 (по оси x перемешаем на 0.9)
-
-            # Добавляем пулю в список с её скоростью и направлением
-            self.ghost_bullets.append((EVIL_bullet_rect, direction_x, direction_y))
-            self.timer_shot_ghost = shot_timer
-
-        # СТРЕЛЬБА В ГЛ ГЕРОЯ
-        dwarf_rect = dwarf.dwarf_rect()
-        ghost_bullet_rects = [bullet for bullet, _, _ in self.ghost_bullets]
-        collided_indices_ghost = dwarf_rect.collidelistall(ghost_bullet_rects)
-        if collided_indices_ghost:
-            for index in collided_indices_ghost:  # Удаляем все столкнувшиеся пули
-                del self.ghost_bullets[index]
-
-        # Обновление положения пуль злого призрака
-        if self.current_location == 0:
-            updated_bullets = []
-            for bullet, direction_x, direction_y in self.ghost_bullets:
-                bullet_speed = 1  # Скорость пули
-
-                # Обновляем координаты пули на основе её направления и скорости
-                bullet.x += direction_x * bullet_speed
-                bullet.y += direction_y * bullet_speed
-
-                # Удаляем пули, которые вышли за экран
-                if 0 < bullet.x < size[0] and 0 < bullet.y < size[1]:
-                    updated_bullets.append((bullet, direction_x, direction_y))
-
-            # Обновляем список пуль
-            self.ghost_bullets = updated_bullets
-        else:
-            self.ghost_bullets = []
-
-
+        ghost.shot_ghost(dwarf_x, dwarf_y, self.current_location, dwarf, size) # Функция выстрелов в гл героя
 
     def draw(self, screen):
         # Отрисовка элементов игры
@@ -218,18 +98,18 @@ class GameDwarf:
         # Отображение персонажа
         dwarf.dwarf_screen(screen)
 
-        """ОТОБРАЖЕНИЕ GHOST"""
-        # Если злой гном существует, рисуем его
-        if self.ghost_image and self.current_location == 0:
-            screen.blit(self.ghost_image, (self.ghost_x, self.ghost_y))
+        # Отображаем ghost на 0 уровне
+        ghost.screen_ghost_0_lvl(self.current_location, screen)
 
-        # Отображение пуль
+        # Отображение пуль dwarf
         dwarf_bullets = dwarf.dwarf_bullets
-        for bullet, _ in dwarf_bullets:
-            screen.blit(self.bullet_image, (bullet.x, bullet.y))  # Отображаем пули
+        bullet_image = dwarf.bullet_image
+        screen_ghost_shot(bullet_image, dwarf_bullets, screen)
 
-        for bullet, _, _ in self.ghost_bullets:
-            screen.blit(self.bullet_image, (bullet.x, bullet.y))  # Отображаем пули
+        # Отображение пуль ghost
+        ghost_bullets = ghost.ghost_bullets
+        bullet_image = ghost.bullet_image
+        screen_ghost_shot(bullet_image, ghost_bullets, screen)
 
         # # Создаем полупрозрачный черный слой
         # dark_overlay = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)
@@ -282,10 +162,6 @@ def initialize_game():
 
 
 if __name__ == "__main__":
-    # Обработка косячной картинки
-    image = Image.open("media/image_main/platform_1.png")
-    image.save("media/image_main/platform_1_fixed.png", icc_profile=None)
-
     size, screen, floor_y, platforms, background_images, ladders, bounding_box_ghost = initialize_game()
 
     """Гл персы"""
