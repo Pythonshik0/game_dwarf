@@ -22,7 +22,7 @@ class Ghost:
         self.last_move_time = time.time() # Время последнего движения
         self.direction = None
         self.check = False
-        self.ghost_speed = 0.5 # Скорость ghost
+        self.ghost_speed = 4 # Скорость ghost
         self.ghost_bullets = [] # Выстрелы злодея
         self.timer_shot_ghost = 0.5
 
@@ -128,7 +128,7 @@ class Ghost:
         # Обновление положения пуль злого призрака
         updated_bullets = []
         for bullet, direction_x, direction_y in self.ghost_bullets:
-            bullet_speed = 1  # Скорость пули
+            bullet_speed = 2  # Скорость пули
 
             # Обновляем координаты пули на основе её направления и скорости
             bullet.x += direction_x * bullet_speed

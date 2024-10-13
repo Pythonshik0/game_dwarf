@@ -2,6 +2,8 @@ import pygame
 import os
 import time
 
+from PIL import Image
+
 
 class Dwarf:
     def __init__(self, screen_height, platforms):
@@ -11,17 +13,40 @@ class Dwarf:
         # Начальная позиция персонажа
         self.dwarf_x = 70 # Положение слева
         self.dwarf_y = screen_height # Вычисляем высоту пола
-        self.dwarf_speed = 0.6  # Скорость перемещения персонажа
+        self.dwarf_speed = 3  # Скорость перемещения персонажа
         self.dwarf_is_jumping = False
-        self.dwarf_jump_speed = 15  # Начальная скорость прыжка
+        self.dwarf_jump_speed = 23  # Начальная скорость прыжка
         self.dwarf_bullets = [] # Список для хранения пуль
         self.vertical_velocity = 0  # Вертикальная скорость
         self.last_jump_time = 0  # Время последнего прыжка
-        self.dwarf_bullet_speed = 1 # Скорость пуль
-        self.gravity = 0.9  # Сила гравитации (ускорение падения)
-        self.max_fall_speed = 0.9  # Максимальная скорость падения
+        self.dwarf_bullet_speed = 5 # Скорость пуль
+        self.gravity = 2.7  # Сила гравитации (ускорение падения)
+        self.max_fall_speed = 2.7  # Максимальная скорость падения
         self.timer_shot = 0  # Таймер выстрела
         self.jump_delay = 0.8  # Задержка между прыжками в секундах
+
+        self.breath_images = {
+            'worth': [
+                pygame.image.load("media/image_main/Стоит-на-месте.png"),
+                pygame.image.load("media/image_main/Стоит-на-месте-1.png"),
+                pygame.image.load("media/image_main/Стоит-на-месте-2.png"),
+            ],
+            'goes_right': [
+                pygame.image.load("media/image_main/Идет-1.png"),
+                pygame.image.load("media/image_main/Идет-2.png"),
+                pygame.image.load("media/image_main/Идет-3.png"),
+            ],
+            'goes_left': [
+                pygame.image.load("media/image_main/Идет-лево-1.png"),
+                pygame.image.load("media/image_main/Идет-лево-2.png"),
+                pygame.image.load("media/image_main/Идет-лево-3.png"),
+            ]
+        }
+
+        # Масштабируем изображения под нужный размер (например, 120x150)
+        self.dwarf_image = [pygame.transform.scale(img, (100, 150)) for img in self.breath_images['worth']]
+        self.current_frame = 0
+        self.last_update = pygame.time.get_ticks()
 
         # Загрузка изображения пули
         self.bullet_image = pygame.image.load('media/image_main/Сфера-1-lvl.png')
@@ -31,77 +56,39 @@ class Dwarf:
         self.dwarf_space = True # Проверка на прыжок
         self.platforms = platforms # Платформы
 
-
-        # Загрузка частей персонажа
-        self.leg_image = pygame.image.load("media/image_main/нога.png").convert_alpha()
-        self.head_image = pygame.image.load("media/image_main/голова.png").convert_alpha()
-        self.body_image = pygame.image.load("media/image_main/туловище.png").convert_alpha()
-        self.arm_image = pygame.image.load("media/image_main/рука.png").convert_alpha()
-
-        # Сохранение размеров частей
-        self.leg_width, self.leg_height = self.leg_image.get_size()
-        self.head_width, self.head_height = self.head_image.get_size()
-        self.body_width, self.body_height = self.body_image.get_size()
-        self.arm_width, self.arm_height = self.arm_image.get_size()
-
-        # Создание единого изображения персонажа
-        self.create_dwarf_image()
-
-    def create_dwarf_image(self):
-        """Создание единого изображения персонажа из частей."""
-        extra_space_for_arms = self.arm_width
-
-        # Рассчитываем общие размеры персонажа
-        dwarf_width = (max(self.head_width, self.body_width, self.leg_width) + 2 * extra_space_for_arms)  # Добавляем место для рук
-        dwarf_height = self.head_height + self.body_height + self.leg_height  # Высота персонажа
-
-        # Создаем пустое изображение для персонажа
-        self.dwarf_image = pygame.Surface((dwarf_width, dwarf_height), pygame.SRCALPHA)
-
-        # Рассчитываем координаты для каждой части
-        leg_y = dwarf_height - self.leg_height
-        body_y = leg_y - self.body_height
-        head_y = body_y - self.head_height
-        arm_y = body_y   # Рука чуть выше туловища
-
-        # Координаты для рук
-        arm_x_left = 5  # Левая рука будет в самой левой части изображения
-        arm_x_right = dwarf_width - self.arm_width - 5 # Правая рука будет в правой части изображения
-
-        # Отзеркаливание правой руки
-        self.right_arm_flipped = pygame.transform.flip(self.arm_image, True, False)  # Отзеркалить по горизонтали
-
-        # Отрисовка частей персонажа на общем изображении
-        self.dwarf_image.blit(self.leg_image, (extra_space_for_arms, leg_y))  # Ноги
-        self.dwarf_image.blit(self.leg_image, (extra_space_for_arms + 10, leg_y))  # Ноги
-        self.dwarf_image.blit(self.body_image, (extra_space_for_arms, body_y))  # Туловище
-        self.dwarf_image.blit(self.head_image, (extra_space_for_arms, head_y))  # Голова
-
-        # Отрисовка двух рук: левой и правой
-        self.dwarf_image.blit(self.arm_image, (arm_x_left, arm_y))  # Левая рука
-        self.dwarf_image.blit(self.right_arm_flipped, (arm_x_right, arm_y))  # Правая рука
-        self.dwarf_image = pygame.transform.scale(self.dwarf_image, (120, 150))
-
-
+    def gif_dwarf(self, now):
+        frame_delay = 200
+        if now - self.last_update > frame_delay:
+            if self.dwarf_image == self.breath_images['worth']:
+                # Логика для анимации "стоит на месте"
+                self.current_frame = (self.current_frame + 1) % len(self.dwarf_image)
+            else:
+                # Логика для других анимаций (идет влево или вправо)
+                self.current_frame = (self.current_frame + 1) % len(self.dwarf_image)  # Переход к следующему кадру
+            self.last_update = now  # Обновляем время последнего обновления
 
     def dwarf_screen(self, screen):
         """Вывод персонажа на экран"""
-        screen.blit(self.dwarf_image, (self.dwarf_x, self.dwarf_y))
+        screen.blit(self.dwarf_image[self.current_frame], (self.dwarf_x, self.dwarf_y))
 
     def dwarf_rect(self):
         """rect dwarf"""
-        dwarf_rect = pygame.Rect(self.dwarf_x, self.dwarf_y, self.dwarf_image.get_width(), self.dwarf_image.get_height())
+        current_image = self.dwarf_image[self.current_frame]  # Получаем текущее изображение
+        dwarf_rect = pygame.Rect(self.dwarf_x, self.dwarf_y, current_image.get_width(), current_image.get_height())
         return dwarf_rect
 
-    def moving_the_dwarf_LEFT(self, keys):
-        """Перемещаем гнома влево и задаем направление стрельбы"""
-        if keys[pygame.K_LEFT]:
-            self.dwarf_x -= self.dwarf_speed
-
-    def moving_the_dwarf_RIGHT(self, keys):
-        """Перемещаем гнома вправо и задаем направление стрельбы"""
+    def moving_the_dwarf(self, keys):
+        """Перемещение гнома влево или вправо и смена изображения"""
         if keys[pygame.K_RIGHT]:
+            self.dwarf_image = [pygame.transform.scale(img, (100, 150)) for img in self.breath_images['goes_right']]
             self.dwarf_x += self.dwarf_speed
+
+        elif keys[pygame.K_LEFT]:
+            self.dwarf_image = [pygame.transform.scale(img, (100, 150)) for img in self.breath_images['goes_left']]
+            self.dwarf_x -= self.dwarf_speed
+        else:
+            # Если ни одна из клавиш не нажата, отображаем анимацию "стоит на месте"
+            self.dwarf_image = [pygame.transform.scale(img, (100, 150)) for img in self.breath_images['worth']]
 
     def dwarf_is_jumping_K_UP(self, keys):
         """Проверка на прыжок: можно прыгать только после задержки"""
@@ -125,7 +112,7 @@ class Dwarf:
 
         # Проверяем коллизии с платформами и полом
         if self.dwarf_image:
-            character_rect = pygame.Rect(self.dwarf_x, self.dwarf_y, self.dwarf_image.get_width(), self.dwarf_image.get_height())
+            character_rect = self.dwarf_rect()
 
             # Проверяем столкновение с платформами
             for platform in platforms[current_location]:
@@ -135,19 +122,18 @@ class Dwarf:
                    (platform.bottom > character_rect.bottom) and \
                    (character_rect.bottom > platform.top): # Проверка, что персонаж сверху платформы
 
-                    self.dwarf_y = platform.top - self.dwarf_image.get_height()  # Корректируем положение на платформе
+                    self.dwarf_y = platform.top - self.dwarf_image[self.current_frame].get_height()  # Корректируем положение на платформе
                     self.dwarf_is_jumping = False  # Завершаем прыжок
                     self.vertical_velocity = 0  # Останавливаем вертикальную скорость
                     break
             else:
-                if self.dwarf_y < floor_y - self.dwarf_image.get_height():
+                if self.dwarf_y < floor_y - self.dwarf_image[self.current_frame].get_height():
                     self.dwarf_is_jumping = True  # Продолжаем прыжок, если ещё не на земле
                 else:
-                    self.dwarf_y = floor_y - self.dwarf_image.get_height()  # Останавливаем на земле
+                    self.dwarf_y = floor_y - self.dwarf_image[self.current_frame].get_height()  # Останавливаем на земле
                     self.dwarf_is_jumping = False  # Завершаем прыжок
                     self.vertical_velocity = 0  # Обнуляем скорость
                     self.dwarf_space = False  # Персонаж на земле
-        return
 
     def dwarf_check_boundaries(self, size, current_location):
         """Проверка выхода за границы экрана и смена уровня"""
@@ -163,20 +149,20 @@ class Dwarf:
         #         dwarf_x = size[0] - 50  # Персонаж в конец экрана
 
         # Ограничиваем движение персонажа в пределах экрана
-        self.dwarf_x = max(0, min(self.dwarf_x, size[0] - self.dwarf_image.get_width()))
+        self.dwarf_x = max(0, min(self.dwarf_x, size[0] - self.dwarf_image[self.current_frame].get_width()))
 
         return self.dwarf_x, current_location
 
     def move_ladders(self, ladders, keys, current_location):
         """Движение по лестнице"""
-        rect = pygame.Rect(self.dwarf_x, self.dwarf_y, self.dwarf_image.get_width(), self.dwarf_image.get_height())
+        rect = self.dwarf_rect()
         for ladder in ladders[current_location]:
             if rect.colliderect(ladder):
                 self.vertical_velocity = 0 # Останавливаем вертикальное движение
                 if keys[pygame.K_DOWN]: # Спуск вниз
-                    self.dwarf_y += 1
+                    self.dwarf_y += 5
                 elif keys[pygame.K_UP]: # Подъем вверх
-                    self.dwarf_y -= 1
+                    self.dwarf_y -= 5
 
     def collision_platform(self, current_location, platforms, ghost_rect):
         """Удаление пулек при попадании в платформу или врагов"""
@@ -225,8 +211,8 @@ class Dwarf:
 
     def _shoot(self, direction): # СТРЕЛЬБА ГЛ. ГЕРОЯ
         """Создание пули и добавление ее в список"""
-        bullet_rect = pygame.Rect(self.dwarf_x + self.dwarf_image.get_width() // 2,
-                                  self.dwarf_y + self.dwarf_image.get_height() // 2,
+        bullet_rect = pygame.Rect(self.dwarf_x + self.dwarf_image[self.current_frame].get_height() // 2,
+                                  self.dwarf_y + self.dwarf_image[self.current_frame].get_height() // 2,
                                   self.bullet_image.get_width(),
                                   self.bullet_image.get_height())  # Создаем прямоугольник для пули
         self.dwarf_bullets.append((bullet_rect, direction))
@@ -234,7 +220,7 @@ class Dwarf:
     def _check_for_dwarf_collision(self): # СТРЕЛЬБА В ГЛ. ГЕРОЯ
         """Проверка на столкновение с выстрелом ЗЛОДЕЕВ"""
         if self.dwarf_image:
-            dwarf = pygame.Rect(self.dwarf_x, self.dwarf_y, self.dwarf_image.get_width(), self.dwarf_image.get_height())
+            dwarf = self.dwarf_rect()
 
             for bullet, _, _ in self.ghost_bullets:
                 if dwarf.colliderect(bullet):

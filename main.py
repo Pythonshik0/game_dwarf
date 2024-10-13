@@ -13,6 +13,7 @@ from platforms import platforms, background_images, ladders, StaticObject, bound
 
 
 shot_delay = 0.5
+clock = pygame.time.Clock()
 
 
 class GameDwarf:
@@ -47,10 +48,12 @@ class GameDwarf:
         ghost_bullets = ghost.ghost_bullets
         ghost_image = ghost.ghost_image
 
+        now = pygame.time.get_ticks()  # Время последнего обновления кадра
+
         if self.dwarf_image:
+            dwarf.gif_dwarf(now)
             dwarf.move_ladders(ladders, keys, self.current_location) # Движение по лестнице
-            dwarf.moving_the_dwarf_LEFT(keys) # Движение влево
-            dwarf.moving_the_dwarf_RIGHT(keys) # Движение вправо
+            dwarf.moving_the_dwarf(keys) # Движение вправо
             dwarf.dwarf_is_jumping_K_UP(keys) # Прыжок dwarf
             dwarf.dwarf_apply_gravity(floor_y, self.current_location, platforms) # Гравитация и движение персонажа на карте
             dwarf.dwarf_check_boundaries(size, self.current_location) # Проверка выхода за границы экрана и смена уровня
@@ -60,7 +63,7 @@ class GameDwarf:
             dwarf.door_next_level(self.door) # Переход на след уровень (Дверь)
 
     def ghost(self):
-        """Управление движениями / стрельбой / прыжками и тд. персонажа (ПРИЗРАКА)"""
+        """Управление движениями / стрельбой / прыжками и тд. персонажа (ПРИЗРАК)"""
         ghost.move_ghost(self.current_location) # Функция движений призрака в зависимости от локации
         dwarf_x, dwarf_y = dwarf.dwarf_x, dwarf.dwarf_y
         ghost.shot_ghost(dwarf_x, dwarf_y, self.current_location, dwarf, size) # Функция выстрелов в гл героя
@@ -79,15 +82,15 @@ class GameDwarf:
         #     # Задаем цвет поверхности (черный)
         #     black_square.fill((0, 0, 0))  # RGB (0, 0, 0) – черный цвет
         #     screen.blit(black_square, (platform.x, platform.y)) # Отображаем платформы
-        #
+
         # for bounding in bounding_box_ghost[self.current_location]:
         #     black_square = pygame.Surface((bounding.width, bounding.height))
         #
         #     # Задаем цвет поверхности (черный)
         #     black_square.fill((0, 0, 0))  # RGB (0, 0, 0) – черный цвет
         #     screen.blit(black_square, (bounding.x, bounding.y)) # Отображаем платформы
-
-        # Отображаем лестницу на 0 уровне
+        #
+        # # Отображаем лестницу на 0 уровне
         # for ladder in ladders[self.current_location]:
         #     black_square = pygame.Surface((ladder.width, ladder.height))
         #
@@ -124,7 +127,7 @@ class GameDwarf:
         #
         # # Наносим маску поверх экрана
         # screen.blit(dark_overlay, (0, 0))
-
+        clock.tick(120)
         pygame.display.flip()  # Обновляем экран
 
     def main(self, size, floor_y):
