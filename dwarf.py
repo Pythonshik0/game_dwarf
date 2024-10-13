@@ -57,14 +57,10 @@ class Dwarf:
         self.platforms = platforms # Платформы
 
     def gif_dwarf(self, now):
+        """Создание движения картинки"""
         frame_delay = 200
         if now - self.last_update > frame_delay:
-            if self.dwarf_image == self.breath_images['worth']:
-                # Логика для анимации "стоит на месте"
-                self.current_frame = (self.current_frame + 1) % len(self.dwarf_image)
-            else:
-                # Логика для других анимаций (идет влево или вправо)
-                self.current_frame = (self.current_frame + 1) % len(self.dwarf_image)  # Переход к следующему кадру
+            self.current_frame = (self.current_frame + 1) % len(self.dwarf_image) # Переход к следующему кадру если взять последний кадр по счету
             self.last_update = now  # Обновляем время последнего обновления
 
     def dwarf_screen(self, screen):
@@ -171,7 +167,7 @@ class Dwarf:
         for platform in platforms[current_location]:
             collided_indices = platform.collidelistall(dwarf_bullet_rects)
             if collided_indices:
-                for index in collided_indices:  # Удаляем все столкнувшиеся пули
+                for index in collided_indices: # Удаляем все столкнувшиеся пули
                     del self.dwarf_bullets[index]
 
         # ________________Стрельба в GHOST главным героем______________________________
