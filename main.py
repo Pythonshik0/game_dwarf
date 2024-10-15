@@ -7,6 +7,7 @@ import math
 
 from ghost import *
 from dwarf import Dwarf
+from stone_trap import StoneTrap
 from utils import screen_ghost_shot
 from platforms import platforms, background_images, ladders, StaticObject, bounding_box_ghost
 
@@ -17,7 +18,7 @@ clock = pygame.time.Clock()
 
 
 class GameDwarf:
-    def __init__(self, dwarf, ghost):
+    def __init__(self, dwarf, ghost, stone_trap):
         # Инициализация игры
         self.runGame = True
 
@@ -68,6 +69,12 @@ class GameDwarf:
         dwarf_x, dwarf_y = dwarf.dwarf_x, dwarf.dwarf_y
         ghost.shot_ghost(dwarf_x, dwarf_y, self.current_location, dwarf, size) # Функция выстрелов в гл героя
 
+    def stone_trap(self):
+        """Ловушки каменные"""
+        now = pygame.time.get_ticks()
+        stone_trap.move(self.current_location, now)
+
+
     def draw(self, screen):
         # Отрисовка элементов игры
         screen.blit(background_images[self.current_location], [0, 0])  # Отображаем фон
@@ -114,6 +121,9 @@ class GameDwarf:
         bullet_image = ghost.bullet_image
         screen_ghost_shot(bullet_image, ghost_bullets, screen)
 
+        # Отображаем ловушки
+        stone_trap.screen_stone_trap(screen)
+
         # # Создаем полупрозрачный черный слой
         # dark_overlay = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)
         # dark_overlay.fill((0, 0, 0, 220))  # Черный цвет с прозрачностью 200
@@ -136,6 +146,7 @@ class GameDwarf:
             keys = pygame.key.get_pressed()
             self.dwarf(keys, floor_y, size) # Функция работы гл героя
             self.ghost() # Призрак
+            self.stone_trap()
             self.draw(screen)
 
         pygame.quit()
@@ -173,5 +184,8 @@ if __name__ == "__main__":
     """Противники"""
     ghost = Ghost(screen.get_height(), screen.get_width()) # Противник 0 lvl
 
-    game_dwarf = GameDwarf(dwarf, ghost)
+    """Ловушки"""
+    stone_trap = StoneTrap(screen.get_height(), screen.get_width())
+
+    game_dwarf = GameDwarf(dwarf, ghost, stone_trap)
     game_dwarf.main(size, floor_y)
