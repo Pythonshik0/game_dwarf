@@ -77,38 +77,37 @@ class Dwarf:
 
     def moving_the_dwarf(self, keys):
         """Перемещение гнома влево или вправо и смена изображения"""
-        if keys[pygame.K_RIGHT] and not keys[pygame.K_DOWN]:
-            self.dwarf_image = [pygame.transform.scale(img, (100, 150)) for img in self.breath_images['goes_right']]
+
+        # Сохраняем высоту персонажа до изменения
+        original_height = 150
+        crouch_height = 70
+
+        if keys[pygame.K_RIGHT]:
             self.dwarf_x += self.dwarf_speed
+            if self.check_K_DOWN:  # Возвращаем персонажа в полный рост
+                self.dwarf_image = [pygame.transform.scale(img, (100, original_height)) for img in self.breath_images['goes_right']]
+            else:
+                self.dwarf_image = [pygame.transform.scale(img, (100, 150)) for img in self.breath_images['goes_right']]
 
-            if self.check_K_DOWN:
-                self.dwarf_y -= 80
-                self.check_K_DOWN = False
-
-
-        elif keys[pygame.K_LEFT] and not keys[pygame.K_DOWN]:
-            self.dwarf_image = [pygame.transform.scale(img, (100, 150)) for img in self.breath_images['goes_left']]
+        if keys[pygame.K_LEFT]:
             self.dwarf_x -= self.dwarf_speed
+            if self.check_K_DOWN:  # Возвращаем персонажа в полный рост
+                self.dwarf_image = [pygame.transform.scale(img, (100, original_height)) for img in self.breath_images['goes_left']]
+            else:
+                self.dwarf_image = [pygame.transform.scale(img, (100, 150)) for img in self.breath_images['goes_left']]
 
-            if self.check_K_DOWN:
-                self.dwarf_y -= 80
-                self.check_K_DOWN = False
+        if keys[pygame.K_DOWN]: # Приседание
+            self.dwarf_image = [pygame.transform.scale(img, (100, crouch_height)) for img in self.breath_images['worth']]
+            if not self.check_K_DOWN:  # Проверяем, чтобы не корректировать позицию несколько раз
+                self.dwarf_y += (original_height - crouch_height)  # Поднимаем персонажа, чтобы компенсировать уменьшение высоты
+                self.check_K_DOWN = True  # Флаг, что персонаж присел
 
-        elif keys[pygame.K_DOWN]:
-            self.dwarf_image = [pygame.transform.scale(img, (100, 70)) for img in self.breath_images['worth']]
-
-            if self.check_K_DOWN is False:
-                print('Тут')
-                # self.dwarf_y += 80
-                self.check_K_DOWN = True
         else:
-            if self.check_K_DOWN:
-                self.dwarf_y -= 80
+            if self.check_K_DOWN:  # Возвращаем персонажа в полный рост
+                self.dwarf_y -= (original_height - crouch_height)  # Возвращаем его Y-позицию обратно
 
             self.check_K_DOWN = False
-            # Если ни одна из клавиш не нажата, отображаем анимацию "стоит на месте"
-            self.dwarf_image = [pygame.transform.scale(img, (100, 150)) for img in self.breath_images['worth']]
-
+            self.dwarf_image = [pygame.transform.scale(img, (100, original_height)) for img in self.breath_images['worth']]
 
     def dwarf_is_jumping_K_UP(self, keys):
         """Проверка на прыжок: можно прыгать только после задержки"""
