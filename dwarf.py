@@ -1,9 +1,10 @@
 import pygame
 import os
 import time
-
 from PIL import Image
 
+
+from utils import dwarf_move_left_or_right
 
 class Dwarf:
     def __init__(self, screen_height, platforms):
@@ -76,25 +77,29 @@ class Dwarf:
         return dwarf_rect
 
     def moving_the_dwarf(self, keys):
-        """Перемещение гнома влево или вправо и смена изображения"""
+        """Перемещение гнома влево или вправо, приседа    и смена изображения"""
 
         # Сохраняем высоту персонажа до изменения
         original_height = 150
         crouch_height = 70
 
         if keys[pygame.K_RIGHT]:
-            self.dwarf_x += self.dwarf_speed
-            if self.check_K_DOWN:  # Возвращаем персонажа в полный рост
-                self.dwarf_image = [pygame.transform.scale(img, (100, original_height)) for img in self.breath_images['goes_right']]
-            else:
-                self.dwarf_image = [pygame.transform.scale(img, (100, 150)) for img in self.breath_images['goes_right']]
+            self.dwarf_x, self.dwarf_image = dwarf_move_left_or_right(
+                self.dwarf_x,
+                "R",
+                self.dwarf_speed,
+                self.check_K_DOWN,
+                self.breath_images['goes_right'],
+                original_height)
 
         if keys[pygame.K_LEFT]:
-            self.dwarf_x -= self.dwarf_speed
-            if self.check_K_DOWN:  # Возвращаем персонажа в полный рост
-                self.dwarf_image = [pygame.transform.scale(img, (100, original_height)) for img in self.breath_images['goes_left']]
-            else:
-                self.dwarf_image = [pygame.transform.scale(img, (100, 150)) for img in self.breath_images['goes_left']]
+            self.dwarf_x, self.dwarf_image = dwarf_move_left_or_right(
+                self.dwarf_x,
+                "L",
+                self.dwarf_speed,
+                self.check_K_DOWN,
+                self.breath_images['goes_left'],
+                original_height)
 
         if keys[pygame.K_DOWN]: # Приседание
             self.dwarf_image = [pygame.transform.scale(img, (100, crouch_height)) for img in self.breath_images['worth']]
