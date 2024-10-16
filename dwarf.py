@@ -80,8 +80,7 @@ class Dwarf:
         """Перемещение гнома влево или вправо, приседа    и смена изображения"""
 
         # Сохраняем высоту персонажа до изменения
-        original_height = 150
-        crouch_height = 70
+        crouch_height, original_height = 70, 150
 
         if keys[pygame.K_RIGHT]:
             self.dwarf_x, self.dwarf_image = dwarf_move_left_or_right(
