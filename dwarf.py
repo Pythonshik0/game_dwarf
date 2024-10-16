@@ -56,6 +56,8 @@ class Dwarf:
         self.dwarf_space = True # Проверка на прыжок
         self.platforms = platforms # Платформы
 
+        self.check_K_DOWN = False
+
     def gif_dwarf(self, now):
         """Создание движения картинки"""
         frame_delay = 200
@@ -75,16 +77,38 @@ class Dwarf:
 
     def moving_the_dwarf(self, keys):
         """Перемещение гнома влево или вправо и смена изображения"""
-        if keys[pygame.K_RIGHT]:
+        if keys[pygame.K_RIGHT] and not keys[pygame.K_DOWN]:
             self.dwarf_image = [pygame.transform.scale(img, (100, 150)) for img in self.breath_images['goes_right']]
             self.dwarf_x += self.dwarf_speed
 
-        elif keys[pygame.K_LEFT]:
+            if self.check_K_DOWN:
+                self.dwarf_y -= 80
+                self.check_K_DOWN = False
+
+
+        elif keys[pygame.K_LEFT] and not keys[pygame.K_DOWN]:
             self.dwarf_image = [pygame.transform.scale(img, (100, 150)) for img in self.breath_images['goes_left']]
             self.dwarf_x -= self.dwarf_speed
+
+            if self.check_K_DOWN:
+                self.dwarf_y -= 80
+                self.check_K_DOWN = False
+
+        elif keys[pygame.K_DOWN]:
+            self.dwarf_image = [pygame.transform.scale(img, (100, 70)) for img in self.breath_images['worth']]
+
+            if self.check_K_DOWN is False:
+                print('Тут')
+                # self.dwarf_y += 80
+                self.check_K_DOWN = True
         else:
+            if self.check_K_DOWN:
+                self.dwarf_y -= 80
+
+            self.check_K_DOWN = False
             # Если ни одна из клавиш не нажата, отображаем анимацию "стоит на месте"
             self.dwarf_image = [pygame.transform.scale(img, (100, 150)) for img in self.breath_images['worth']]
+
 
     def dwarf_is_jumping_K_UP(self, keys):
         """Проверка на прыжок: можно прыгать только после задержки"""
@@ -95,6 +119,15 @@ class Dwarf:
             self.dwarf_space = True  # Флаг пространства для прыжка
             self.last_jump_time = current_time  # Обновляем время последнего прыжка
 
+    def contact_trap_update_x_or_y(self, update_dwarf_x, update_dwarf_y):
+        """Функция для смены положения персонажа при соприкосновении с stone trap"""
+        if self.dwarf_x > update_dwarf_x:
+            self.dwarf_x -= 3
+            self.dwarf_y -= 3
+
+        elif self.dwarf_x < update_dwarf_x:
+            self.dwarf_x += 3
+            self.dwarf_y -= 3
 
     def dwarf_apply_gravity(self, floor_y, current_location, platforms):
         """Применение гравитации и обновление положения персонажа"""

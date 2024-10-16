@@ -37,6 +37,9 @@ class GameDwarf:
         image_size = 250, 250
         self.home_image = StaticObject(home_image, (0, 511), image_size) # Создаем наш объект
 
+        self.dwarf_x_new = None # Положение dwarf при столкновении с ловушкой stone trap
+        self.dwarf_y_new = None # Положение dwarf при столкновении с ловушкой stone trap
+
     def handle_events(self):
         # Обработка событий (закрытие окна)
         for event in pygame.event.get():
@@ -72,8 +75,12 @@ class GameDwarf:
     def stone_trap(self):
         """Ловушки каменные"""
         now = pygame.time.get_ticks()
-        stone_trap.move(self.current_location, now, platforms)
+        stone_trap.move(self.current_location, now, platforms) # Движение ловушки
 
+        dwarf_rect = dwarf.dwarf_rect() # Rect главного героя
+        self.dwarf_x_new, self.dwarf_y_new = stone_trap.contact_hero(dwarf_rect) # Столкновение Rect trap и Rect dwarf
+
+        dwarf.contact_trap_update_x_or_y(self.dwarf_x_new, self.dwarf_y_new) # Обновление персонажа dwarf при столкновении с stone trap
 
     def draw(self, screen):
         # Отрисовка элементов игры
