@@ -72,7 +72,7 @@ class GameDwarf:
     def stone_trap(self):
         """Ловушки каменные"""
         now = pygame.time.get_ticks()
-        stone_trap.move(self.current_location, now)
+        stone_trap.move(self.current_location, now, platforms)
 
 
     def draw(self, screen):
