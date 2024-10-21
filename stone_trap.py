@@ -26,10 +26,12 @@ class StoneTrap:
         self.trap_height = self.screen_height * 0.7
 
     def stone_trap_rect(self):
+        """Rect ловушки"""
         rect = pygame.Rect(self.stone_trap_x, self.stone_trap_y, self.trap_width, self.trap_height)
         return rect
 
     def screen_stone_trap(self, screen):
+        """Отображение ловушки"""
         trap = pygame.Surface((self.trap_width, self.trap_height))
 
         # Задаем цвет поверхности (черный)
@@ -37,6 +39,7 @@ class StoneTrap:
         screen.blit(trap, (self.stone_trap_x, self.stone_trap_y)) # Отображаем платформы
 
     def move(self, current_location, now, platforms):
+        """Движение ловушки"""
         # Timeout срабатывания ловушки
         frame_delay = 5000
         if now - self.timeout > frame_delay and self.check_trap is False and self.check_trap_max is False:

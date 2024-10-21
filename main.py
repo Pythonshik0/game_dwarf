@@ -10,7 +10,7 @@ from dwarf import Dwarf
 from stone_trap import StoneTrap
 from utils import screen_ghost_shot
 from platforms import platforms, background_images, ladders, StaticObject, bounding_box_ghost
-
+from arrow_trap import ArrowTrap
 
 
 shot_delay = 0.5
@@ -18,7 +18,7 @@ clock = pygame.time.Clock()
 
 
 class GameDwarf:
-    def __init__(self, dwarf, ghost, stone_trap):
+    def __init__(self, dwarf):
         # Инициализация игры
         self.runGame = True
 
@@ -82,6 +82,13 @@ class GameDwarf:
 
         dwarf.contact_trap_update_x_or_y(self.dwarf_x_new, self.dwarf_y_new) # Обновление персонажа dwarf при столкновении с stone trap
 
+    def arrow_trap(self):
+        """Ловушка со стрелой при нажатии на плиту"""
+        dwarf_rect = dwarf.dwarf_rect() # Rect главного героя
+        check_stove = arrow_trap.checking_pressure_stove(self.current_location, dwarf_rect) # Проверка на нажатие плиты персонажем
+
+        arrow_trap.move_arrow(check_stove)
+
     def draw(self, screen):
         # Отрисовка элементов игры
         screen.blit(background_images[self.current_location], [0, 0])  # Отображаем фон
@@ -115,6 +122,11 @@ class GameDwarf:
         # Отображение персонажа
         dwarf.dwarf_screen(screen)
 
+        # Отображение плиты для нажатия
+        arrow_trap.screen_stove_trap_0_lvl(self.current_location, screen)
+        # Отображение ловушки со стрелой
+        arrow_trap.screen_arrow_trap_0_lvl(self.current_location, screen)
+
         # Отображаем ghost на 0 уровне
         ghost.screen_ghost_0_lvl(self.current_location, screen)
 
@@ -144,7 +156,7 @@ class GameDwarf:
         #
         # # Наносим маску поверх экрана
         # screen.blit(dark_overlay, (0, 0))
-        clock.tick(120)
+        clock.tick(120) # 120 ФПС
         pygame.display.flip()  # Обновляем экран
 
     def main(self, size, floor_y):
@@ -153,9 +165,9 @@ class GameDwarf:
             keys = pygame.key.get_pressed()
             self.dwarf(keys, floor_y, size) # Функция работы гл героя
             self.ghost() # Призрак
+            self.arrow_trap()
             self.stone_trap()
             self.draw(screen)
-
         pygame.quit()
 
 
@@ -192,7 +204,11 @@ if __name__ == "__main__":
     ghost = Ghost(screen.get_height(), screen.get_width()) # Противник 0 lvl
 
     """Ловушки"""
-    stone_trap = StoneTrap(screen.get_height(), screen.get_width())
+    stone_trap = StoneTrap(screen.get_height(), screen.get_width()) # Ловушка каменные шипы
 
-    game_dwarf = GameDwarf(dwarf, ghost, stone_trap)
+    # img = Image.open('media/image_main/Стрела-1.png') # Загрузка изображения
+    # img.save('media/image_main/Стрела-1.png', 'PNG', icc_profile=None) # Сохранение изображения без sRGB профиля
+    arrow_trap = ArrowTrap(screen.get_height(), screen.get_width()) # Ловушка со стрелой
+
+    game_dwarf = GameDwarf(dwarf)
     game_dwarf.main(size, floor_y)
