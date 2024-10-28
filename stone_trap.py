@@ -23,7 +23,9 @@ class StoneTrap:
 
         # Размер ловушки
         self.trap_width = self.screen_width * 0.1
-        self.trap_height = self.screen_height * 0.7
+        self.trap_height = self.screen_height * 0.4
+
+        self.trap_image = pygame.image.load('media/image_main/Колья.png')
 
     def stone_trap_rect(self):
         """Rect ловушки"""
@@ -32,11 +34,8 @@ class StoneTrap:
 
     def screen_stone_trap(self, screen):
         """Отображение ловушки"""
-        trap = pygame.Surface((self.trap_width, self.trap_height))
-
-        # Задаем цвет поверхности (черный)
-        trap.fill((0, 0, 0))  # RGB (0, 0, 0) – черный цвет
-        screen.blit(trap, (self.stone_trap_x, self.stone_trap_y)) # Отображаем платформы
+        self.trap_image = pygame.transform.scale(self.trap_image, (self.trap_width, self.trap_height))
+        screen.blit(self.trap_image, (self.stone_trap_x, self.stone_trap_y))
 
     def move(self, current_location, now, platforms):
         """Движение ловушки"""
@@ -75,11 +74,11 @@ class StoneTrap:
             # Проверка, вошел ли персонаж в ловушку с левой стороны
             if rect_dwarf.right > rect_trap.left and rect_dwarf.centerx < rect_trap.centerx:
                 # Отталкиваем персонажа влево
-                rect_dwarf.x = rect_trap.left - rect_dwarf.width  # Перемещаем персонажа влево от ловушки
+                rect_dwarf.x = rect_trap.left - rect_dwarf.width # Перемещаем персонажа влево от ловушки
 
             # Проверка, вошел ли персонаж в ловушку с правой стороны
             elif rect_dwarf.left < rect_trap.right and rect_dwarf.centerx > rect_trap.centerx:
                 # Отталкиваем персонажа вправо
-                rect_dwarf.x = rect_trap.right  # Перемещаем персонажа вправо от ловушки
+                rect_dwarf.x = rect_trap.right # Перемещаем персонажа вправо от ловушки
 
         return rect_dwarf.x, rect_dwarf.y

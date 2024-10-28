@@ -100,7 +100,7 @@ class Dwarf:
                 self.breath_images['goes_left'],
                 original_height)
 
-        if keys[pygame.K_DOWN]: # Приседание
+        if keys[pygame.K_LCTRL]: # Приседание
             self.dwarf_image = [pygame.transform.scale(img, (100, crouch_height)) for img in self.breath_images['worth']]
             if not self.check_K_DOWN:  # Проверяем, чтобы не корректировать позицию несколько раз
                 self.dwarf_y += (original_height - crouch_height)  # Поднимаем персонажа, чтобы компенсировать уменьшение высоты

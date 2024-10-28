@@ -11,7 +11,7 @@ from stone_trap import StoneTrap
 from utils import screen_ghost_shot
 from platforms import platforms, background_images, ladders, StaticObject, bounding_box_ghost
 from arrow_trap import ArrowTrap
-
+from mushroom import Mushroom
 
 shot_delay = 0.5
 clock = pygame.time.Clock()
@@ -72,6 +72,10 @@ class GameDwarf:
         dwarf_x, dwarf_y = dwarf.dwarf_x, dwarf.dwarf_y
         ghost.shot_ghost(dwarf_x, dwarf_y, self.current_location, dwarf, size) # Функция выстрелов в гл героя
 
+
+    def mushroom(self):
+        mushroom.move_mushroom(self.current_location)
+
     def stone_trap(self):
         """Ловушки каменные"""
         now = pygame.time.get_ticks()
@@ -119,16 +123,11 @@ class GameDwarf:
         #     black_square.fill((0, 0, 0))  # RGB (0, 0, 0) – черный цвет
         #     screen.blit(black_square, (ladder.x, ladder.y)) # Отображаем платформы
 
-        # Отображение персонажа
-        dwarf.dwarf_screen(screen)
-
-        # Отображение плиты для нажатия
-        arrow_trap.screen_stove_trap_0_lvl(self.current_location, screen)
-        # Отображение ловушки со стрелой
-        arrow_trap.screen_arrow_trap_0_lvl(self.current_location, screen)
-
-        # Отображаем ghost на 0 уровне
-        ghost.screen_ghost_0_lvl(self.current_location, screen)
+        dwarf.dwarf_screen(screen) # Отображение персонажа
+        arrow_trap.screen_stove_trap_0_lvl(self.current_location, screen) # Отображение плиты для нажатия
+        arrow_trap.screen_arrow_trap_0_lvl(self.current_location, screen) # Отображение ловушки со стрелой
+        ghost.screen_ghost_0_lvl(self.current_location, screen) # Отображаем ghost на 0 уровне
+        mushroom.screen_mushroom_0_lvl(self.current_location, screen) # Отображаем грибочка
 
         # Отображение пуль dwarf
         dwarf_bullets = dwarf.dwarf_bullets
@@ -165,6 +164,7 @@ class GameDwarf:
             keys = pygame.key.get_pressed()
             self.dwarf(keys, floor_y, size) # Функция работы гл героя
             self.ghost() # Призрак
+            self.mushroom() # Грибочек
             self.arrow_trap()
             self.stone_trap()
             self.draw(screen)
@@ -201,10 +201,12 @@ if __name__ == "__main__":
     dwarf = Dwarf(screen.get_height(), platforms) # Гл. перс 0 lvl
 
     """Противники"""
-    ghost = Ghost(screen.get_height(), screen.get_width()) # Противник 0 lvl
+    ghost = Ghost(screen.get_height(), screen.get_width()) # Призрак
+    mushroom = Mushroom(screen.get_height(), screen.get_width()) # Грибочек
 
     """Ловушки"""
     stone_trap = StoneTrap(screen.get_height(), screen.get_width()) # Ловушка каменные шипы
+
 
     # img = Image.open('media/image_main/Стрела-1.png') # Загрузка изображения
     # img.save('media/image_main/Стрела-1.png', 'PNG', icc_profile=None) # Сохранение изображения без sRGB профиля

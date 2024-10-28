@@ -6,6 +6,7 @@ import random
 import math
 
 from platforms import bounding_box_ghost as bounding_box_ghost_0_lvl
+from platforms import platforms
 
 
 class Ghost:
@@ -117,13 +118,24 @@ class Ghost:
             self.ghost_bullets.append((EVIL_bullet_rect, direction_x, direction_y))
             self.timer_shot_ghost = shot_timer
 
-        # СТРЕЛЬБА В ГЛ ГЕРОЯ
+        # Стрельба в гл. героя
         dwarf_rect = dwarf.dwarf_rect()
         ghost_bullet_rects = [bullet for bullet, _, _ in self.ghost_bullets]
+
+        # Пули исчезаю, когда сталкиваются с гл. героем
         collided_indices_ghost = dwarf_rect.collidelistall(ghost_bullet_rects)
         if collided_indices_ghost:
-            for index in collided_indices_ghost:  # Удаляем все столкнувшиеся пули
+            for index in collided_indices_ghost: # Удаляем все столкнувшиеся пули
                 del self.ghost_bullets[index]
+
+        # Пули исчезаю, когда сталкиваются со платформами
+        rect_platforms = platforms(size[0], size[1])[current_location]
+        for platform_rect in rect_platforms:
+            collided_indices_platforms = platform_rect.collidelistall(ghost_bullet_rects)
+            if collided_indices_platforms:
+                # Обработка столкновения
+                for index in collided_indices_platforms:
+                    del self.ghost_bullets[index]
 
         # Обновление положения пуль злого призрака
         updated_bullets = []

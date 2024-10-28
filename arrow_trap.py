@@ -21,7 +21,7 @@ class ArrowTrap:
 
         # Начальная позиция стрелы
         self.arrow_x = screen_width # Положение слева
-        self.arrow_y = screen_height * 0.9 # Вычисляем высоту пола
+        self.arrow_y = screen_height * 0.82 # Вычисляем высоту пола
 
         self._pressure_stove = False # Нажатие на плиту
         self.arrow_image = None
@@ -40,7 +40,6 @@ class ArrowTrap:
         if current_location == 0:
             image = pygame.image.load('media/image_main/Стрела-1.png')
             self.arrow_image = pygame.transform.scale(image, (self.screen_width * 0.1, self.screen_height * 0.01))
-
             screen.blit(self.arrow_image, (self.arrow_x, self.arrow_y))
 
     def stove_trap_rect(self):
