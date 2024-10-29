@@ -74,7 +74,10 @@ class GameDwarf:
 
 
     def mushroom(self):
-        mushroom.move_mushroom(self.current_location)
+        mushroom.move_mushroom(self.current_location) # Движение
+        mushroom.hit_mushroom(self.current_location, dwarf.dwarf_rect()) # Атака на гл. героя
+
+        mushroom.gif_dwarf(pygame.time.get_ticks()) # Гифка грибочка
 
     def stone_trap(self):
         """Ловушки каменные"""

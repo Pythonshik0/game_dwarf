@@ -125,7 +125,7 @@ class Ghost:
         # Пули исчезаю, когда сталкиваются с гл. героем
         collided_indices_ghost = dwarf_rect.collidelistall(ghost_bullet_rects)
         if collided_indices_ghost:
-            for index in collided_indices_ghost: # Удаляем все столкнувшиеся пули
+            for index in sorted(collided_indices_ghost, reverse=True): # Удаляем все столкнувшиеся пули
                 del self.ghost_bullets[index]
 
         # Пули исчезаю, когда сталкиваются со платформами
