@@ -25,18 +25,16 @@ class Mushroom:
                 pygame.image.load("media/image_main/грибочек.png").convert_alpha(),
             ],
             'hit': [
+                pygame.image.load('media/image_main/грибочек-атата-1.png').convert_alpha(),
+                pygame.image.load('media/image_main/грибочек-атата-2.png').convert_alpha(),
+                pygame.image.load('media/image_main/грибочек-атата-3.png').convert_alpha(),
+                pygame.image.load('media/image_main/грибочек-атата-4.png').convert_alpha(),
                 pygame.image.load('media/image_main/грибочек-атата.png').convert_alpha(),
             ]
         }
         self.last_update = pygame.time.get_ticks()
-        self.current_frame = 0
-        # self.time_ghost_location = time.time()
-        # self.last_move_time = time.time() # Время последнего движения
-        # self.direction = None
-
-        # self.ghost_speed = 4 # Скорость ghost
-        # self.ghost_bullets = [] # Выстрелы злодея
-        # self.timer_shot_ghost = 0.5
+        self.current_frame = 0 # Для гифки стоя на месте
+        self.current_attack = 0 # Для гифки атаки
 
         # Начальная позиция персонажа
         self.mushroom_x = screen_width * 0.7 # Положение слева
@@ -46,11 +44,7 @@ class Mushroom:
         self.mushroom_height = screen_height * 0.05
         self.mushroom_width = screen_width * 0.03
 
-        # self.mushroom = self.images['worth'][0]
-        # self.mushroom_image = pygame.transform.scale(self.mushroom, (self.mushroom_width, self.mushroom_height)) # Задание нового размера персонажа (например, 100x100 пикселей)
-
         self.mushroom_images = [pygame.transform.scale(img, (self.mushroom_width, self.mushroom_height)) for img in self.images['worth']]
-        # self.hit_image = pygame.transform.scale(self.images['hit'][0], (self.screen_width * 0.07, self.screen_height * 0.06))
         self.hit_image = [pygame.transform.scale(img, (self.screen_width * 0.08, self.screen_height * 0.06)) for img in self.images['hit']]
 
     def screen_mushroom_0_lvl(self, current_location, screen):
@@ -58,44 +52,45 @@ class Mushroom:
             if not self.attack:
                 screen.blit(self.mushroom_images[self.current_frame], (self.mushroom_x, self.mushroom_y))
             else:
-                screen.blit(self.hit_image[0], (self.mushroom_x, self.mushroom_y))
+                attack_image = self.hit_image[self.current_attack]
+                screen.blit(attack_image, (self.mushroom_x - (self.screen_width * 0.025), self.mushroom_y - (self.screen_height * 0.01)))
+
+        # # Отображаем центры персонажа и гриба для визуального контроля
+        # pygame.draw.circle(screen, (255, 0, 0), self.rect_mushroom().center, 5)  # Центр персонажа (красный)
 
     def rect_mushroom(self):
         """Возвращает прямоугольник гриба для коллизий."""
         if not self.attack:
-            return pygame.Rect(self.mushroom_x, self.mushroom_y,
-                               self.mushroom_images[self.current_frame].get_width(),
-                               self.mushroom_images[self.current_frame].get_height())
+            return pygame.Rect(self.mushroom_x, self.mushroom_y, self.mushroom_images[self.current_frame].get_width(), self.mushroom_images[self.current_frame].get_height())
         else:
-            return pygame.Rect(self.mushroom_x, self.mushroom_y,
-                               self.hit_image[0].get_width(),
-                               self.hit_image[0].get_height())
+            return pygame.Rect(self.mushroom_x - (self.screen_width * 0.025), self.mushroom_y - (self.screen_height * 0.01), self.hit_image[self.current_attack].get_width(), self.hit_image[self.current_attack].get_height())
 
     def gif_dwarf(self, now):
         """Создание движения картинки."""
-        frame_delay = 500
-        if now - self.last_update > frame_delay:
-            self.current_frame = (self.current_frame + 1) % len(self.mushroom_images)  # Переход к следующему кадру
-            self.last_update = now  # Обновляем время последнего обновления
 
-    def move_mushroom(self, current_location):
+        # Если атаки нет
+        if not self.attack:
+            frame_delay = 500
+            if now - self.last_update > frame_delay:
+                self.current_frame = (self.current_frame + 1) % len(self.mushroom_images)  # Переход к следующему кадру
+                self.last_update = now  # Обновляем время последнего обновления
+        else:
+            # Если идет атака
+            frame_delay = 100
+            if now - self.last_update > frame_delay:
+                self.current_attack = (self.current_attack + 1) % len(self.hit_image) # Переход к следующему кадру
+                self.last_update = now  # Обновляем время последнего обновления
+
+    def move_mushroom(self, current_location, dwarf_rect, screen):
         """Функция движений грибочка в зависимости от локации"""
-        if self.attack is False:
-            self.mushroom_image = [pygame.transform.scale(img, (self.mushroom_width, self.mushroom_height)) for img in self.images['worth']]
+        rect_mushroom = self.rect_mushroom()
 
-        # if not self.move_part:
-        #     self.mushroom_x -= self.speed_move
-        # else:
-        #     self.mushroom_x += self.speed_move
-        #
-        # rect_platforms = platforms(self.screen_width, self.screen_height)[current_location]
-        # rect_mushroom = self.rect_mushroom()
-        # for platform_rect in rect_platforms:
-        #     if platform_rect.left == rect_mushroom.left:
-        #         self.move_part = True
-        #
-        #     elif platform_rect.right == rect_mushroom.right:
-        #         self.move_part = False
+        if abs(dwarf_rect.bottom - rect_mushroom.bottom) < 100:
+            if dwarf_rect.centerx >= rect_mushroom.centerx:
+                self.mushroom_x += 1
+            else:
+                self.mushroom_x -= 1
+
 
     def hit_mushroom(self, current_location, dwarf_rect):
         rect_mushroom = self.rect_mushroom()
@@ -104,12 +99,8 @@ class Mushroom:
             conflict = dwarf_rect.colliderect(rect_mushroom)
             if conflict:
                 self.attack = True
-                self.mushroom_y = self.screen_height * 0.57  # Высота после атаки
-                self.mushroom_x = self.screen_width * 0.675 # Горизонтальное расположение
             else:
                 self.attack = False
-                self.mushroom_x = self.screen_width * 0.7
-                self.mushroom_y = self.screen_height * 0.58  # Обычная высота
 
 
 

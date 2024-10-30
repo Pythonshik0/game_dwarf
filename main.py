@@ -73,8 +73,8 @@ class GameDwarf:
         ghost.shot_ghost(dwarf_x, dwarf_y, self.current_location, dwarf, size) # Функция выстрелов в гл героя
 
 
-    def mushroom(self):
-        mushroom.move_mushroom(self.current_location) # Движение
+    def mushroom(self, screen):
+        mushroom.move_mushroom(self.current_location, dwarf.dwarf_rect(), screen) # Движение за гл героем
         mushroom.hit_mushroom(self.current_location, dwarf.dwarf_rect()) # Атака на гл. героя
 
         mushroom.gif_dwarf(pygame.time.get_ticks()) # Гифка грибочка
@@ -167,7 +167,7 @@ class GameDwarf:
             keys = pygame.key.get_pressed()
             self.dwarf(keys, floor_y, size) # Функция работы гл героя
             self.ghost() # Призрак
-            self.mushroom() # Грибочек
+            self.mushroom(screen) # Грибочек
             self.arrow_trap()
             self.stone_trap()
             self.draw(screen)
@@ -201,7 +201,7 @@ if __name__ == "__main__":
     size, screen, floor_y, platforms, background_images, ladders, bounding_box_ghost = initialize_game()
 
     """Гл персы"""
-    dwarf = Dwarf(screen.get_height(), platforms) # Гл. перс 0 lvl
+    dwarf = Dwarf(screen.get_height(), platforms, screen.get_width()) # Гл. перс 0 lvl
 
     """Противники"""
     ghost = Ghost(screen.get_height(), screen.get_width()) # Призрак
